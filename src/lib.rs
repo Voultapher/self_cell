@@ -84,6 +84,6 @@ pub mod sync {
 
 pub mod custom {
     // User provided OnceCell. Has to implement OnceCellCompatible.
-    pub type OnceSelfCell<Owner, DependentCell> = crate::once_self_cell::OnceSelfCell<Owner, DependentCell>;
+    pub type OnceSelfCell<Owner, DependentCell> =
+        crate::once_self_cell::OnceSelfCell<Owner, DependentCell>;
 }
-

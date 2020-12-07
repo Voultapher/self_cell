@@ -16,7 +16,9 @@ struct LazyAst {
 
 impl LazyAst {
     fn new(body: String) -> Self {
-        LazyAst{once_ast: OnceSelfCell::<String>::new(body)}
+        LazyAst {
+            once_ast: OnceSelfCell::<String>::new(body),
+        }
     }
 
     fn get_body<'a>(&'a self) -> &'a String {

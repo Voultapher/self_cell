@@ -17,7 +17,9 @@ struct LazyAst {
 
 impl LazyAst {
     fn new(body: String) -> Self {
-        LazyAst{once_ast: OnceSelfCell::<String>::new(body)}
+        LazyAst {
+            once_ast: OnceSelfCell::<String>::new(body),
+        }
     }
 
     fn get_body<'a>(&'a self) -> &'a String {
@@ -109,7 +111,8 @@ fn share_across_threads() {
 
         assert_eq!(lazy_ast.get_body(), &body);
         assert_eq!(lazy_ast.get_ast(), &expected_ast);
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 // TODO test that not send type cannot be shared.

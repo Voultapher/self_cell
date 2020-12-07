@@ -65,7 +65,8 @@ where
 
         // In this function we have access to the correct Dependent type and lifetime,
         // so we can turn the pointer back into the concrete pointer.
-        let dependent_ptr = unsafe { transmute::<DependentInner, *mut Dependent>(*dependent_void_ptr) };
+        let dependent_ptr =
+            unsafe { transmute::<DependentInner, *mut Dependent>(*dependent_void_ptr) };
 
         // Return the dereference of the Dependent type pointer, which we know is initialized
         // because we just called get_or_init.
