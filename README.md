@@ -8,7 +8,7 @@ without leaking the struct internal lifetime. In a nutshell,
 the API looks *roughly* like this:
 
 ```rust
-impl OnceCell<Owner> {
+impl OnceSelfCell<Owner> {
     fn new(owner: Owner) -> OnceSelfCell<Owner> { ... }
     fn get_owner<'a>(&'a self) -> &'a Owner { ... }
     fn get_or_init_dependent<'a, Dependent>(
