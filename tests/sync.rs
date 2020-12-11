@@ -27,8 +27,6 @@ impl LazyAst {
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
-        // The user has to make sure that the return type of ast_from_string and the generic
-        // parameter of get_or_init_dependent are the same.
         self.ast_cell.get_or_init_dependent(ast_from_string)
     }
 }
