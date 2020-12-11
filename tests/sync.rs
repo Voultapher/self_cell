@@ -12,30 +12,24 @@ fn ast_from_string<'input>(owner: &'input String) -> Ast<'input> {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    once_ast: OnceSelfCell<String>,
+    ast_cell: OnceSelfCell<String>,
 }
 
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            once_ast: OnceSelfCell::<String>::new(body),
+            ast_cell: OnceSelfCell::<String>::new(body),
         }
     }
 
     fn get_body<'a>(&'a self) -> &'a String {
-        self.once_ast.get_owner()
+        self.ast_cell.get_owner()
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
         // The user has to make sure that the return type of ast_from_string and the generic
         // parameter of get_or_init_dependent are the same.
-        self.once_ast.get_or_init_dependent(ast_from_string)
-    }
-}
-
-impl Drop for LazyAst {
-    fn drop<'a>(&'a mut self) {
-        unsafe { self.once_ast.drop_dependent_unconditional::<Ast<'a>>() };
+        self.ast_cell.get_or_init_dependent(ast_from_string)
     }
 }
 
