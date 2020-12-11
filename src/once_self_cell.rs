@@ -1,4 +1,5 @@
 use core::fmt::{Debug, Error, Formatter};
+use core::hash::{Hash, Hasher};
 use core::mem::transmute;
 
 use crate::OnceCellCompatible;
@@ -7,10 +8,7 @@ use crate::OnceCellCompatible;
 pub type VoidPtr = *mut u8;
 pub type DependentInner = (VoidPtr, fn(VoidPtr));
 
-pub struct OnceSelfCell<Owner, DependentCell>
-where
-    Owner: Debug + Clone + Eq,
-    DependentCell: Debug + OnceCellCompatible<DependentInner>,
+pub struct OnceSelfCell<Owner, DependentCell: OnceCellCompatible<DependentInner>>
 {
     // It's crucial these members are private.
     owner_ptr: *mut Owner,
@@ -21,8 +19,7 @@ where
 
 impl<Owner, DependentCell> OnceSelfCell<Owner, DependentCell>
 where
-    Owner: Debug + Clone + Eq,
-    DependentCell: Debug + OnceCellCompatible<DependentInner>,
+    DependentCell: OnceCellCompatible<DependentInner>,
 {
     pub fn new(owner: Owner) -> Self {
         OnceSelfCell {
@@ -99,8 +96,7 @@ where
 
 impl<Owner, DependentCell> Drop for OnceSelfCell<Owner, DependentCell>
 where
-    Owner: Debug + Clone + Eq,
-    DependentCell: Debug + OnceCellCompatible<DependentInner>,
+    DependentCell: OnceCellCompatible<DependentInner>,
 {
     fn drop(&mut self) {
         // After drop is run, Rust will recursively try to drop all of the fields of self.
@@ -123,23 +119,23 @@ where
 unsafe impl<Owner, DependentCell> Send for OnceSelfCell<Owner, DependentCell>
 where
     // Only derive Send if Owner and DependentCell is also Send
-    Owner: Debug + Clone + Eq + Send,
-    DependentCell: Debug + OnceCellCompatible<DependentInner> + Send,
+    Owner: Send,
+    DependentCell: OnceCellCompatible<DependentInner> + Send,
 {
 }
 
 unsafe impl<Owner, DependentCell> Sync for OnceSelfCell<Owner, DependentCell>
 where
     // Only derive Sync if Owner and DependentCell is also Sync
-    Owner: Debug + Clone + Eq + Sync,
-    DependentCell: Debug + OnceCellCompatible<DependentInner> + Sync,
+    Owner: Sync,
+    DependentCell: OnceCellCompatible<DependentInner> + Sync,
 {
 }
 
 impl<Owner, DependentCell> Clone for OnceSelfCell<Owner, DependentCell>
 where
-    Owner: Debug + Clone + Eq,
-    DependentCell: Debug + OnceCellCompatible<DependentInner>,
+    Owner: Clone,
+    DependentCell: OnceCellCompatible<DependentInner>,
 {
     fn clone(&self) -> Self {
         // The cloned instance has a non yet initialized dependent.
@@ -152,8 +148,8 @@ where
 
 impl<Owner, DependentCell> PartialEq for OnceSelfCell<Owner, DependentCell>
 where
-    Owner: Debug + Clone + Eq,
-    DependentCell: Debug + OnceCellCompatible<DependentInner>,
+    Owner: PartialEq,
+    DependentCell: OnceCellCompatible<DependentInner>,
 {
     fn eq(&self, other: &Self) -> bool {
         *self.get_owner() == *other.get_owner()
@@ -162,14 +158,24 @@ where
 
 impl<Owner, DependentCell> Eq for OnceSelfCell<Owner, DependentCell>
 where
-    Owner: Debug + Clone + Eq,
-    DependentCell: Debug + OnceCellCompatible<DependentInner>,
+    Owner: Eq,
+    DependentCell: OnceCellCompatible<DependentInner>,
 {
+}
+
+impl<Owner, DependentCell> Hash for OnceSelfCell<Owner, DependentCell>
+where
+    Owner: Hash,
+    DependentCell: OnceCellCompatible<DependentInner>,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.get_owner().hash(state);
+    }
 }
 
 impl<Owner, DependentCell> Debug for OnceSelfCell<Owner, DependentCell>
 where
-    Owner: Debug + Clone + Eq,
+    Owner: Debug,
     DependentCell: Debug + OnceCellCompatible<DependentInner>,
 {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {

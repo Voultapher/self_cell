@@ -76,3 +76,12 @@ fn return_self_ref_struct() {
     assert_eq!(lazy_ast.get_body(), &expected_body);
     assert_eq!(lazy_ast.get_ast(), &expected_ast);
 }
+
+#[test]
+fn no_derive_owner_type() {
+    struct NoDerive(i32);
+
+    let no_derive = OnceSelfCell::<NoDerive>::new(NoDerive(22));
+
+    assert_eq!(no_derive.get_or_init_dependent(|x: &NoDerive| x.0), &22);
+}
