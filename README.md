@@ -144,6 +144,7 @@ cargo miri test
 ### Related crates
 
 [once_cell](https://github.com/matklad/once_cell)
+
 [rental](https://github.com/jpernst/rental)
 
 ## Contributing
