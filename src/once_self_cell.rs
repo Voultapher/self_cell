@@ -8,8 +8,7 @@ use crate::OnceCellCompatible;
 pub type VoidPtr = *mut u8;
 pub type DependentInner = (VoidPtr, fn(VoidPtr));
 
-pub struct OnceSelfCell<Owner, DependentCell: OnceCellCompatible<DependentInner>>
-{
+pub struct OnceSelfCell<Owner, DependentCell: OnceCellCompatible<DependentInner>> {
     // It's crucial these members are private.
     owner_ptr: *mut Owner,
 
@@ -37,8 +36,7 @@ where
     pub fn get_or_init_dependent<'a, Dependent>(
         &'a self,
         make_dependent: impl FnOnce(&'a Owner) -> Dependent,
-    ) -> &'a Dependent
-    {
+    ) -> &'a Dependent {
         // type Dependent<'a> = <dyn OwnerRef<'a> + 'a>::Dependent;
 
         // Self referential structs are currently not supported with safe vanilla Rust.
@@ -67,7 +65,7 @@ where
             let drop_fn = |dependent_void_ptr: VoidPtr| {
                 // We assume this function is only called with a valid dependent_void_ptr.
                 let dependent_ptr =
-                unsafe { transmute::<VoidPtr, *mut Dependent>(dependent_void_ptr) };
+                    unsafe { transmute::<VoidPtr, *mut Dependent>(dependent_void_ptr) };
 
                 let dependent_box = unsafe { Box::from_raw(dependent_ptr) };
 
@@ -79,8 +77,7 @@ where
 
         // In this function we have access to the correct Dependent type and lifetime,
         // so we can turn the pointer back into the concrete pointer.
-        let dependent_ptr =
-            unsafe { transmute::<VoidPtr, *mut Dependent>(*dependent_void_ptr) };
+        let dependent_ptr = unsafe { transmute::<VoidPtr, *mut Dependent>(*dependent_void_ptr) };
 
         // Return the dereference of the Dependent type pointer, which we know is initialized
         // because we just called get_or_init.
