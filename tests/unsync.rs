@@ -11,13 +11,13 @@ fn ast_from_string<'input>(owner: &'input String) -> Ast<'input> {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String>,
+    ast_cell: OnceSelfCell<String, Ast<'static>>,
 }
 
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::<String>::new(body),
+            ast_cell: OnceSelfCell::new(body),
         }
     }
 
@@ -77,9 +77,30 @@ fn return_self_ref_struct() {
 
 #[test]
 fn no_derive_owner_type() {
-    struct NoDerive(i32);
+    struct NoDerive<'a>(&'a i32);
 
-    let no_derive = OnceSelfCell::<NoDerive>::new(NoDerive(22));
+    let no_derive = OnceSelfCell::<NoDerive, &'static i32>::new(NoDerive(&22));
 
-    assert_eq!(no_derive.get_or_init_dependent(|x: &NoDerive| x.0), &22);
+    assert_eq!(no_derive.get_or_init_dependent(|x: &NoDerive| x.0), &&22);
+}
+
+#[test]
+#[should_panic(
+    expected = "assertion failed: `(left == right)`\n  left: `\"()\"`,\n right: `\"i32\"`"
+)]
+fn invalid_init_type() {
+    let cell = OnceSelfCell::<String, ()>::new("".into());
+    let _init_with_nothing = cell.get_or_init_dependent(|_| ());
+    // Get with i32 should not work, because we expect nothing.
+    let _get_with_i32 = cell.get_or_init_dependent(|_| 33);
+}
+
+#[test]
+#[should_panic(
+    expected = "assertion failed: `(left == right)`\n  left: `\"unsync::Ast\"`,\n right: `\"i32\"`"
+)]
+fn different_init_types() {
+    let cell = OnceSelfCell::<String, Ast<'static>>::new("helllllo".into());
+    let _init_with_ast = cell.get_or_init_dependent(ast_from_string);
+    let _get_with_i32 = cell.get_or_init_dependent(|_| 33);
 }

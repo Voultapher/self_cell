@@ -12,13 +12,13 @@ fn ast_from_string<'input>(owner: &'input String) -> Ast<'input> {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String>,
+    ast_cell: OnceSelfCell<String, Ast<'static>>,
 }
 
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::<String>::new(body),
+            ast_cell: OnceSelfCell::new(body),
         }
     }
 

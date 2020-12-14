@@ -36,7 +36,8 @@ pub mod unsync {
         }
     }
 
-    pub type OnceSelfCell<Owner> = crate::once_self_cell::OnceSelfCell<Owner, UnsyncOnceCell>;
+    pub type OnceSelfCell<Owner, DependentStaticLifetime> =
+        crate::once_self_cell::OnceSelfCell<Owner, DependentStaticLifetime, UnsyncOnceCell>;
 }
 
 pub mod sync {
@@ -79,11 +80,12 @@ pub mod sync {
     unsafe impl Send for SyncOnceCell {}
     unsafe impl Sync for SyncOnceCell {}
 
-    pub type OnceSelfCell<Owner> = crate::once_self_cell::OnceSelfCell<Owner, SyncOnceCell>;
+    pub type OnceSelfCell<Owner, DependentStaticLifetime> =
+        crate::once_self_cell::OnceSelfCell<Owner, DependentStaticLifetime, SyncOnceCell>;
 }
 
 pub mod custom {
     // User provided OnceCell. Has to implement OnceCellCompatible.
-    pub type OnceSelfCell<Owner, DependentCell> =
-        crate::once_self_cell::OnceSelfCell<Owner, DependentCell>;
+    pub type OnceSelfCell<Owner, DependentStaticLifetime, DependentCell> =
+        crate::once_self_cell::OnceSelfCell<Owner, DependentStaticLifetime, DependentCell>;
 }

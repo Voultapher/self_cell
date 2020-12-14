@@ -8,7 +8,7 @@ without leaking the struct internal lifetime. In a nutshell,
 the API looks *roughly* like this:
 
 ```rust
-impl OnceSelfCell<Owner> {
+impl OnceSelfCell<Owner, DependentStaticLifetime> {
     fn new(owner: Owner) -> OnceSelfCell<Owner> { ... }
     fn get_owner<'a>(&'a self) -> &'a Owner { ... }
     fn get_or_init_dependent<'a, Dependent>(
@@ -39,13 +39,13 @@ fn ast_from_string<'a>(owner: &'a String) -> Ast<'a> {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String>,
+    ast_cell: OnceSelfCell<String, Ast<'static>>,
 }
 
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::<String>::new(body),
+            ast_cell: OnceSelfCell::new(body),
         }
     }
 
@@ -91,23 +91,24 @@ With `OnceSelfCell` the above becomes:
 ```rust
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String>,
+    ast_cell: OnceSelfCell<String, Ast<'static>>,
 }
 ```
 
 Notice, that `LasyAst` is free of lifetime annotations, and can be safely used
 like any other struct.
 
-Wait, but where did Ast go?
+Wait, but why is Ast marked as lifetime `'static`?
 
-Behind the scenes `OnceSelfCell` performs type erasure, which allows it to be
-initialized once dynamically.
+Behind the scenes `OnceSelfCell` performs type erasure and lifetime erasure,
+which allows it to be initialized once dynamically, and check that all
+accesses are of the same type.
 
 ```rust
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::<String>::new(body),
+            ast_cell: OnceSelfCell::new(body),
         }
     }
 
@@ -141,11 +142,13 @@ cargo test
 cargo miri test
 ```
 
-### Related crates
+### Related projects
 
 [once_cell](https://github.com/matklad/once_cell)
 
 [rental](https://github.com/jpernst/rental)
+
+[Schroedinger](https://github.com/dureuill/sc)
 
 ## Contributing
 

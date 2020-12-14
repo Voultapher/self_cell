@@ -1,5 +1,7 @@
+use core::any::type_name;
 use core::fmt::{Debug, Error, Formatter};
 use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
 use core::mem::transmute;
 
 use crate::OnceCellCompatible;
@@ -8,15 +10,18 @@ use crate::OnceCellCompatible;
 pub type VoidPtr = *mut u8;
 pub type DependentInner = (VoidPtr, fn(VoidPtr));
 
-pub struct OnceSelfCell<Owner, DependentCell: OnceCellCompatible<DependentInner>> {
+pub struct OnceSelfCell<Owner, DependentStatic, DependentCell: OnceCellCompatible<DependentInner>> {
     // It's crucial these members are private.
     owner_ptr: *mut Owner,
 
     // Store lifetime dependent stuff as 'void pointers', transmute out as needed.
     dependent_cell: DependentCell,
+
+    // We need DependentStatic to ensure dependent is transmuted into the same type every time.
+    phantom: PhantomData<DependentStatic>,
 }
 
-impl<Owner, DependentCell> OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     DependentCell: OnceCellCompatible<DependentInner>,
 {
@@ -24,6 +29,7 @@ where
         OnceSelfCell {
             owner_ptr: Box::into_raw(Box::new(owner)),
             dependent_cell: DependentCell::new(),
+            phantom: PhantomData,
         }
     }
 
@@ -37,7 +43,16 @@ where
         &'a self,
         make_dependent: impl FnOnce(&'a Owner) -> Dependent,
     ) -> &'a Dependent {
-        // type Dependent<'a> = <dyn OwnerRef<'a> + 'a>::Dependent;
+        // Arguably this is quite hacky, but with the current set of compilers this gets the job
+        // done of preventing accidental UB, while also being optimized out:
+        // https://godbolt.org/z/9MMdE7.
+        //
+        // Should one day rustc decide to implement this in a way that breaks this,
+        // it can be adjusted.
+        // Maybe by then HKTs are a thing and a lot of this gets moot anyway.
+        //
+        // Until then rustc 1.38-1.48 all worked as expected.
+        assert_eq!(type_name::<DependentStatic>(), type_name::<Dependent>());
 
         // Self referential structs are currently not supported with safe vanilla Rust.
         // The only reasonable safe alternative is to expect the user to juggle 2 separate
@@ -91,7 +106,8 @@ where
     }
 }
 
-impl<Owner, DependentCell> Drop for OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> Drop
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     DependentCell: OnceCellCompatible<DependentInner>,
 {
@@ -113,7 +129,8 @@ where
 // drop_dependent_unconditional takes &mut self, so that's not a thread concern anyway.
 // And get_or_init_dependent should be as thread compatible as OnceCell.
 // Owner never gets changed after init.
-unsafe impl<Owner, DependentCell> Send for OnceSelfCell<Owner, DependentCell>
+unsafe impl<Owner, DependentStatic, DependentCell> Send
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     // Only derive Send if Owner and DependentCell is also Send
     Owner: Send,
@@ -121,7 +138,8 @@ where
 {
 }
 
-unsafe impl<Owner, DependentCell> Sync for OnceSelfCell<Owner, DependentCell>
+unsafe impl<Owner, DependentStatic, DependentCell> Sync
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     // Only derive Sync if Owner and DependentCell is also Sync
     Owner: Sync,
@@ -129,7 +147,8 @@ where
 {
 }
 
-impl<Owner, DependentCell> Clone for OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> Clone
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     Owner: Clone,
     DependentCell: OnceCellCompatible<DependentInner>,
@@ -139,11 +158,13 @@ where
         OnceSelfCell {
             owner_ptr: Box::into_raw(Box::new(self.get_owner().clone())),
             dependent_cell: DependentCell::new(),
+            phantom: PhantomData,
         }
     }
 }
 
-impl<Owner, DependentCell> PartialEq for OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> PartialEq
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     Owner: PartialEq,
     DependentCell: OnceCellCompatible<DependentInner>,
@@ -153,14 +174,16 @@ where
     }
 }
 
-impl<Owner, DependentCell> Eq for OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> Eq
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     Owner: Eq,
     DependentCell: OnceCellCompatible<DependentInner>,
 {
 }
 
-impl<Owner, DependentCell> Hash for OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> Hash
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     Owner: Hash,
     DependentCell: OnceCellCompatible<DependentInner>,
@@ -170,7 +193,8 @@ where
     }
 }
 
-impl<Owner, DependentCell> Debug for OnceSelfCell<Owner, DependentCell>
+impl<Owner, DependentStatic, DependentCell> Debug
+    for OnceSelfCell<Owner, DependentStatic, DependentCell>
 where
     Owner: Debug,
     DependentCell: Debug + OnceCellCompatible<DependentInner>,
