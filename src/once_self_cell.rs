@@ -115,13 +115,15 @@ where
         // After drop is run, Rust will recursively try to drop all of the fields of self.
         // So it will automatically clean up the OnceCell.
 
-        unsafe {
-            drop(Box::from_raw(self.owner_ptr));
-        }
+        // IMPORTANT: drop dependent before owner.
 
         // After calling take the regular drop of OnceCell can cope by itself.
         if let Some((dependent_void_ptr, drop_fn)) = self.dependent_cell.take() {
             drop_fn(dependent_void_ptr);
+        }
+
+        unsafe {
+            drop(Box::from_raw(self.owner_ptr));
         }
     }
 }

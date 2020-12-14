@@ -1,5 +1,7 @@
 // Unfortunately some unsafe is being used, this gets tested with miri.
 
+use core::fmt::Debug;
+
 use once_self_cell::unsync::OnceSelfCell;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -103,4 +105,26 @@ fn different_init_types() {
     let cell = OnceSelfCell::<String, Ast<'static>>::new("helllllo".into());
     let _init_with_ast = cell.get_or_init_dependent(ast_from_string);
     let _get_with_i32 = cell.get_or_init_dependent(|_| 33);
+}
+
+impl<'a, T: Debug> Drop for Ref<'a, T> {
+    fn drop(&mut self) {
+        println!("{:?}", self.0);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Ref<'a, T: Debug>(&'a T);
+
+#[derive(Debug, PartialEq, Eq)]
+enum Void {}
+
+#[test]
+fn custom_drop() {
+    type OV = Option<Vec<Void>>;
+    let cell = OnceSelfCell::<OV, Ref<'static, OV>>::new(None);
+
+    let expected_dependent = Ref::<'_, OV>(&None);
+
+    assert_eq!(cell.get_or_init_dependent(Ref), &expected_dependent);
 }
