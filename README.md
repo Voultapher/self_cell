@@ -17,7 +17,7 @@ impl OnceSelfCell<Owner, DependentStaticLifetime> {
     fn get_owner<'a>(&'a self) -> &'a Owner { ... }
     fn get_or_init_dependent<'a, Dependent>(
         &'a self,
-        make_dependent: impl FnOnce(&'a Owner) -> Dependent,
+        make_dependent: fn(&'a Owner) -> Dependent,
     ) -> &'a Dependent { ... }
 }
 ```
