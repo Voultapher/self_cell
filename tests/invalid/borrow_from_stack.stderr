@@ -1,0 +1,5 @@
+error[E0515]: cannot return reference to local variable `stack_string`
+ --> $DIR/borrow_from_stack.rs:5:5
+  |
+5 |     &stack_string
+  |     ^^^^^^^^^^^^^ returns a reference to data owned by the current function

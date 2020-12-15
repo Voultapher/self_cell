@@ -41,7 +41,7 @@ where
 
     pub fn get_or_init_dependent<'a, Dependent>(
         &'a self,
-        make_dependent: impl FnOnce(&'a Owner) -> Dependent,
+        make_dependent: fn(&'a Owner) -> Dependent,
     ) -> &'a Dependent {
         // Arguably this is quite hacky, but with the current set of compilers this gets the job
         // done of preventing accidental UB, while also being optimized out:

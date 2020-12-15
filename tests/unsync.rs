@@ -128,3 +128,10 @@ fn custom_drop() {
 
     assert_eq!(cell.get_or_init_dependent(Ref), &expected_dependent);
 }
+
+#[test]
+#[cfg_attr(miri, ignore)]
+fn invalid_compile() {
+    let t = trybuild::TestCases::new();
+    t.compile_fail("tests/invalid/*.rs");
+}
