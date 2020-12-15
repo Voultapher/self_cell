@@ -130,7 +130,10 @@ fn custom_drop() {
 }
 
 #[test]
+// Not supported by miri isolation.
 #[cfg_attr(miri, ignore)]
+// Closure paths slashes show up as diff error on Windows.
+#[cfg(not(target_os = "windows"))]
 fn invalid_compile() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/invalid/*.rs");
