@@ -154,6 +154,8 @@ cargo miri test
 
 [Schroedinger](https://github.com/dureuill/sc)
 
+[owning_ref](https://github.com/Kimundi/owning-ref-rs)
+
 ## Contributing
 
 Please respect the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) when contributing.
