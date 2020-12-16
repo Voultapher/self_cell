@@ -18,7 +18,7 @@ struct LazyAst {
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::new(body),
+            ast_cell: OnceSelfCell::new(body, ast_from_string),
         }
     }
 
@@ -27,7 +27,7 @@ impl LazyAst {
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
-        self.ast_cell.get_or_init_dependent(ast_from_string)
+        self.ast_cell.get_or_init_dependent::<Ast<'a>>()
     }
 }
 

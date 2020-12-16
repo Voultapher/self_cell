@@ -19,7 +19,7 @@ struct LazyAst {
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::new(body),
+            ast_cell: OnceSelfCell::new(body, ast_from_string),
         }
     }
 
@@ -28,7 +28,7 @@ impl LazyAst {
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
-        self.ast_cell.get_or_init_dependent(ast_from_string)
+        self.ast_cell.get_or_init_dependent::<Ast<'a>>()
     }
 }
 
@@ -81,9 +81,9 @@ fn return_self_ref_struct() {
 fn no_derive_owner_type() {
     struct NoDerive<'a>(&'a i32);
 
-    let no_derive = OnceSelfCell::<NoDerive, &'static i32>::new(NoDerive(&22));
+    let no_derive = OnceSelfCell::<NoDerive, &'static i32>::new(NoDerive(&22), |x: &NoDerive| x.0);
 
-    assert_eq!(no_derive.get_or_init_dependent(|x: &NoDerive| x.0), &&22);
+    assert_eq!(no_derive.get_or_init_dependent::<&i32>(), &&22);
 }
 
 #[test]
@@ -91,10 +91,7 @@ fn no_derive_owner_type() {
     expected = "assertion failed: `(left == right)`\n  left: `\"()\"`,\n right: `\"i32\"`"
 )]
 fn invalid_init_type() {
-    let cell = OnceSelfCell::<String, ()>::new("".into());
-    let _init_with_nothing = cell.get_or_init_dependent(|_| ());
-    // Get with i32 should not work, because we expect nothing.
-    let _get_with_i32 = cell.get_or_init_dependent(|_| 33);
+    let _ = OnceSelfCell::<String, ()>::new("".into(), |_| 33);
 }
 
 #[test]
@@ -102,10 +99,21 @@ fn invalid_init_type() {
     expected = "assertion failed: `(left == right)`\n  left: `\"unsync::Ast\"`,\n right: `\"i32\"`"
 )]
 fn different_init_types() {
-    let cell = OnceSelfCell::<String, Ast<'static>>::new("helllllo".into());
-    let _init_with_ast = cell.get_or_init_dependent(ast_from_string);
-    let _get_with_i32 = cell.get_or_init_dependent(|_| 33);
+    let cell = OnceSelfCell::<String, Ast<'static>>::new("helllllo".into(), ast_from_string);
+    let _get_with_i32 = cell.get_or_init_dependent::<i32>();
 }
+
+#[test]
+#[should_panic(
+    expected = "assertion failed: `(left == right)`\n  left: `\"unsync::Ast\"`,\n right: `\"&unsync::Ast\"`"
+)]
+fn different_init_ref_types() {
+    let cell = OnceSelfCell::<String, Ast<'static>>::new("helllllo".into(), ast_from_string);
+    let _get_with_i32 = cell.get_or_init_dependent::<&Ast>();
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Ref<'a, T: Debug>(&'a T);
 
 impl<'a, T: Debug> Drop for Ref<'a, T> {
     fn drop(&mut self) {
@@ -114,19 +122,19 @@ impl<'a, T: Debug> Drop for Ref<'a, T> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Ref<'a, T: Debug>(&'a T);
-
-#[derive(Debug, PartialEq, Eq)]
 enum Void {}
 
 #[test]
 fn custom_drop() {
     type OV = Option<Vec<Void>>;
-    let cell = OnceSelfCell::<OV, Ref<'static, OV>>::new(None);
+    let cell = OnceSelfCell::<OV, Ref<'static, OV>>::new(None, Ref);
 
     let expected_dependent = Ref::<'_, OV>(&None);
 
-    assert_eq!(cell.get_or_init_dependent(Ref), &expected_dependent);
+    assert_eq!(
+        cell.get_or_init_dependent::<Ref::<'_, OV>>(),
+        &expected_dependent
+    );
 }
 
 #[test]

@@ -6,6 +6,6 @@ fn borrow_from_stack<'a>(_: &()) -> &'a String {
 }
 
 fn main() {
-    let c: OnceSelfCell<(), &String> = OnceSelfCell::new(());
-    let _ = c.get_or_init_dependent(borrow_from_stack);
+    let c: OnceSelfCell<(), &String> = OnceSelfCell::new((), borrow_from_stack);
+    let _ = c.get_or_init_dependent::<String>();
 }

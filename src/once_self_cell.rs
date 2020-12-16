@@ -18,6 +18,9 @@ pub struct OnceSelfCell<
     // It's crucial these members are private.
     owner_ptr: *mut Owner,
 
+    // Store make_dependent function pointer to ensure only one is used.
+    make_dependent_void_ptr: VoidPtr,
+
     // Store lifetime dependent stuff as 'void pointers', transmute out as needed.
     dependent_cell: DependentCell,
 
@@ -29,9 +32,24 @@ impl<Owner, DependentStatic, DependentCell> OnceSelfCell<Owner, DependentStatic,
 where
     DependentCell: OnceCellCompatible<DependentInner>,
 {
-    pub fn new(owner: Owner) -> Self {
+    pub fn new<'a, Dependent>(owner: Owner, make_dependent: fn(&'a Owner) -> Dependent) -> Self {
+        // Arguably this is quite hacky, but with the current set of compilers this gets the job
+        // done of preventing accidental UB, while also being optimized out:
+        // https://godbolt.org/z/9MMdE7.
+        //
+        // Should one day rustc decide to implement this in a way that breaks this,
+        // it can be adjusted.
+        // Maybe by then HKTs are a thing and a lot of this gets moot anyway.
+        //
+        // Until then rustc 1.38-1.48 all worked as expected.
+        assert_eq!(type_name::<DependentStatic>(), type_name::<Dependent>());
+
+        let make_dependent_void_ptr =
+            unsafe { transmute::<fn(&'a Owner) -> Dependent, VoidPtr>(make_dependent) };
+
         OnceSelfCell {
             owner_ptr: Box::into_raw(Box::new(owner)),
+            make_dependent_void_ptr,
             dependent_cell: DependentCell::new(),
             phantom: PhantomData,
         }
@@ -43,10 +61,7 @@ where
         unsafe { &*self.owner_ptr }
     }
 
-    pub fn get_or_init_dependent<'a, Dependent>(
-        &'a self,
-        make_dependent: fn(&'a Owner) -> Dependent,
-    ) -> &'a Dependent {
+    pub fn get_or_init_dependent<'a, Dependent>(&'a self) -> &'a Dependent {
         // Arguably this is quite hacky, but with the current set of compilers this gets the job
         // done of preventing accidental UB, while also being optimized out:
         // https://godbolt.org/z/9MMdE7.
@@ -62,7 +77,7 @@ where
         // The only reasonable safe alternative is to expect the user to juggle 2 separate
         // data structures which is a mess. The library solution rental is both no longer
         // maintained and really heavy to compile. So begrudgingly I rolled my own version.
-        // There are 5 core invariants we require for this to be safe to use.
+        // There are some of the core invariants we require for this to be safe to use.
         //
         // 1. owner is initialized when OnceSelfCell is constructed.
         // 2. owner is NEVER changed again.
@@ -70,10 +85,13 @@ where
         // 4. The only access to dependent is as immutable reference.
         // 5. owner lives longer than dependent.
 
-        // Store the opaque pointer inside the once_cell if not yet initialized.
         let (dependent_void_ptr, _) = self.dependent_cell.get_or_init(|| {
             // We know owner comes from a pointer and lives longer enough for this ref.
             let owner = unsafe { transmute::<*mut Owner, &'a Owner>(self.owner_ptr) };
+
+            let make_dependent = unsafe {
+                transmute::<VoidPtr, fn(&'a Owner) -> Dependent>(self.make_dependent_void_ptr)
+            };
 
             let dependent_ptr = Box::into_raw(Box::new(make_dependent(owner)));
 
@@ -164,6 +182,7 @@ where
         OnceSelfCell {
             owner_ptr: Box::into_raw(Box::new(self.get_owner().clone())),
             dependent_cell: DependentCell::new(),
+            make_dependent_void_ptr: self.make_dependent_void_ptr,
             phantom: PhantomData,
         }
     }
