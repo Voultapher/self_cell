@@ -10,7 +10,11 @@ use crate::OnceCellCompatible;
 pub type VoidPtr = *mut u8;
 pub type DependentInner = (VoidPtr, fn(VoidPtr));
 
-pub struct OnceSelfCell<Owner, DependentStatic, DependentCell: OnceCellCompatible<DependentInner>> {
+pub struct OnceSelfCell<
+    Owner: 'static,
+    DependentStatic: 'static,
+    DependentCell: OnceCellCompatible<DependentInner>,
+> {
     // It's crucial these members are private.
     owner_ptr: *mut Owner,
 

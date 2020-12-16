@@ -1,0 +1,7 @@
+error[E0477]: the type `Ast<'a>` does not fulfill the required lifetime
+ --> $DIR/non_static_dependent_static.rs:6:12
+  |
+6 |     let _: OnceSelfCell<String, Ast<'a>> = OnceSelfCell::new("33".into());
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: type must satisfy the static lifetime
