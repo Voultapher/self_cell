@@ -8,21 +8,19 @@ This project is still experimental and in code review https://users.rust-lang.or
 
 # OnceSelfCell
 
-`once_self_cell` provides two new cell-like types, `unsync::OnceSelfCell` and `sync::OnceSelfCell`. `OnceSelfCell` might store arbitrary non-Copy types,
-can be assigned to at most once and provide direct access to the stored contents,
+`once_self_cell` provides two macros, `unsync_once_self_cell` and `sync_once_self_cell`. These generate a struct that can be assigned to at most once and provide direct reference access to the stored contents,
 **and** can store a dependent value, with a lifetime depending on the owner.
-This enables safe to use macro free self referential structs in stable Rust,
+This enables safe to use proc-macro free self referential structs in stable Rust,
 without leaking the struct internal lifetime. In a nutshell,
 the API looks *roughly* like this:
 
 ```rust
-impl OnceSelfCell<Owner, DependentStaticLifetime> {
-    fn new(owner: Owner) -> OnceSelfCell<Owner> { ... }
+unsync_once_self_cell!(NewStructName, Owner, Dependent<'_>, derive(Clone));
+
+impl NewStructName {
+    fn new(owner: Owner) -> NewStructName { ... }
     fn get_owner<'a>(&'a self) -> &'a Owner { ... }
-    fn get_or_init_dependent<'a, Dependent>(
-        &'a self,
-        make_dependent: fn(&'a Owner) -> Dependent,
-    ) -> &'a Dependent { ... }
+    fn get_or_init_dependent>(&'a self) -> &'a Dependent<'a> { ... }
 }
 ```
 
@@ -31,29 +29,51 @@ The only reasonable safe alternative is to expect the user to juggle 2 separate
 data structures which is a mess. The library solution rental is both no longer
 maintained and really heavy to compile due to its use of procedural macros.
 
-This alternative is `no-std`, uses no macros, a total of ~10 lines unsafe and works on stable Rust, and is miri tested. With a total of less than 200 lines of implementation code, which consists mostly of type and trait wrangling, this crate aims to be a good minimal solution to the problem of self referential structs.
+This alternative is `no-std`, uses no proc macros, a total of ~10 lines unsafe and works on stable Rust, and is miri tested. With a total of less than 200 lines of implementation code, which consists mostly of type and trait wrangling, this crate aims to be a good minimal solution to the problem of self referential structs.
 
-A motivating use case:
+### Fast compile times
+
+```
+$ rm -rf target && cargo +nightly build -Z timings
+
+Compiling once_cell v1.5.2
+Compiling once_self_cell v0.6.0
+Completed once_cell v1.5.2 in 0.3s
+Completed once_self_cell v0.5.0 in 0.3s
+```
+
+Because it does **not** use proc macros, compile times are fast.
+
+### A motivating use case
 
 ```rust
-use once_self_cell::unsync::OnceSelfCell;
+use once_self_cell::unsync_once_self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
-struct Ast<'a>(pub Vec<&'a str>);
+struct Ast<'input>(pub Vec<&'input str>);
 
-fn ast_from_string<'a>(owner: &'a String) -> Ast<'a> {
-    Ast(vec![&owner[2..5], &owner[1..3]])
+impl<'a> From<&'a String> for Ast<'a> {
+    fn from(body: &'a String) -> Self {
+        Ast(vec![&body[2..5], &body[1..3]])
+    }
 }
+
+unsync_once_self_cell!(
+    LazyAstCell,
+    String,
+    Ast<'_>,
+    derive(Clone, Debug, Eq, PartialEq)
+);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String, Ast<'static>>,
+    ast_cell: LazyAstCell,
 }
 
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::new(body),
+            ast_cell: LazyAstCell::new(body),
         }
     }
 
@@ -62,15 +82,9 @@ impl LazyAst {
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
-        self.ast_cell.get_or_init_dependent(ast_from_string)
+        self.ast_cell.get_or_init_dependent()
     }
 }
-```
-
-A node data structure derived from some input for example:
-
-```rust
-struct Ast<'a>(pub Vec<&'a str>);
 ```
 
 Classically if for example you to want to read the input files from the filesystem
@@ -94,29 +108,49 @@ struct LazyAst {
 Putting the things that belong together, together. Yet that's currently not
 possible in Rust. `OnceSelfCell` aims to fill this gap.
 
-With `OnceSelfCell` the above becomes:
+With `once_self_cell` the above becomes:
 
 ```rust
+unsync_once_self_cell!(
+    LazyAstCell,
+    String,
+    Ast<'_>,
+    derive(Clone, Debug, Eq, PartialEq)
+);
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String, Ast<'static>>,
+    ast_cell: LazyAstCell,
 }
 ```
 
 Notice, that `LasyAst` is free of lifetime annotations, and can be safely used
 like any other struct.
 
-Wait, but why is Ast marked as lifetime `'static`?
+What is this `'_` lifetime? This is a sort of higher kinded lifetime, that
+with the help of a macro becomes the appropriate lifetime in the place of
+use, in this case `get_or_init_dependent` and `drop`.
 
-Behind the scenes `OnceSelfCell` performs type erasure and lifetime erasure,
-which allows it to be initialized once dynamically, and check that all
-accesses are of the same type.
+Behind the scenes type and lifetime erasure is performed.
+which allows it to be initialized once dynamically.
+
+For this Dependent has to implement `From<&Owner>` or `Into<Dependent<'a>`
+has to be implemented.
 
 ```rust
+#[derive(Debug, Eq, PartialEq)]
+struct Ast<'input>(pub Vec<&'input str>);
+
+impl<'a> From<&'a String> for Ast<'a> {
+    fn from(body: &'a String) -> Self {
+        Ast(vec![&body[2..5], &body[1..3]])
+    }
+}
+
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::new(body),
+            ast_cell: LazyAstCell::new(body),
         }
     }
 
@@ -125,18 +159,10 @@ impl LazyAst {
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
-        self.ast_cell.get_or_init_dependent(ast_from_string)
+        self.ast_cell.get_or_init_dependent()
     }
 }
-
-fn ast_from_string<'a>(owner: &'a String) -> Ast<'a> {
-    Ast(vec![&owner[2..5], &owner[1..3]])
-}
 ```
-
-The key is `get_or_init_dependent` uses the type described in `ast_from_string`
-which contains a valid lifetime for `Ast`, to construct, read and drop the
-dependent value.
 
 ### Installing
 
@@ -159,6 +185,8 @@ cargo miri test
 [Schroedinger](https://github.com/dureuill/sc)
 
 [owning_ref](https://github.com/Kimundi/owning-ref-rs)
+
+[ouroboros](https://github.com/joshua-maros/ouroboros)
 
 ## Contributing
 
