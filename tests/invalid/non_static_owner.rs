@@ -1,8 +1,16 @@
-use std::cell::Cell;
+use once_self_cell::sync_once_self_cell;
 
-use once_self_cell::unsync::OnceSelfCell;
+struct Dependent<'a>(&'a String);
+
+impl<'a> From<&&'a String> for Dependent<'a> {
+    fn from(s: &&'a String) -> Self {
+        Self(s)
+    }
+}
+
+sync_once_self_cell!(BorrowFromStack, &'_ String, Dependent<'_>,);
 
 fn main() {
-    let owner = String::from("bleib");
-    let c: OnceSelfCell<&String, Cell<&String>> = OnceSelfCell::new(&owner, |_| panic!());
+    let c = BorrowFromStack::new(&String::from("abc"));
+    let _ = c.get_or_init_dependent();
 }

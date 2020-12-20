@@ -1,8 +1,0 @@
-error[E0308]: mismatched types
- --> $DIR/closure_init.rs:6:62
-  |
-6 |     let c: OnceSelfCell<(), &String> = OnceSelfCell::new((), |_| s.as_ref().unwrap());
-  |                                                              ^^^^^^^^^^^^^^^^^^^^^^^ expected fn pointer, found closure
-  |
-  = note: expected fn pointer `fn(&()) -> &String`
-                found closure `[closure@$DIR/tests/invalid/closure_init.rs:6:62: 6:85]`

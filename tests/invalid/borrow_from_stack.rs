@@ -1,11 +1,18 @@
-use once_self_cell::sync::OnceSelfCell;
+use once_self_cell::sync_once_self_cell;
 
-fn borrow_from_stack<'a>(_: &()) -> &'a String {
-    let stack_string = String::from("hello stack");
-    &stack_string
+struct Owner(());
+struct Dependent<'a>(&'a String);
+
+impl<'a> From<&Owner> for Dependent<'a> {
+    fn from(_: &Owner) -> Self {
+        let stack_string = String::from("hello stack");
+        Self(&stack_string)
+    }
 }
 
+sync_once_self_cell!(BorrowFromStack, Owner, Dependent<'_>,);
+
 fn main() {
-    let c: OnceSelfCell<(), &String> = OnceSelfCell::new((), borrow_from_stack);
-    let _ = c.get_or_init_dependent::<String>();
+    let c = BorrowFromStack::new(Owner(()));
+    let _ = c.get_or_init_dependent();
 }

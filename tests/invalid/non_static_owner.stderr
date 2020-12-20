@@ -1,18 +1,17 @@
-warning: unused variable: `c`
- --> $DIR/non_static_owner.rs:7:9
-  |
-7 |     let c: OnceSelfCell<&String, Cell<&String>> = OnceSelfCell::new(&owner, |_| panic!());
-  |         ^ help: if this is intentional, prefix it with an underscore: `_c`
-  |
-  = note: `#[warn(unused_variables)]` on by default
+error[E0106]: missing lifetime specifier
+  --> $DIR/non_static_owner.rs:11:40
+   |
+11 | sync_once_self_cell!(BorrowFromStack, &'_ String, Dependent<'_>,);
+   |                                        ^^ expected named lifetime parameter
+   |
 
-error[E0597]: `owner` does not live long enough
- --> $DIR/non_static_owner.rs:7:69
-  |
-7 |     let c: OnceSelfCell<&String, Cell<&String>> = OnceSelfCell::new(&owner, |_| panic!());
-  |                                                   ------------------^^^^^^---------------
-  |                                                   |                 |
-  |                                                   |                 borrowed value does not live long enough
-  |                                                   argument requires that `owner` is borrowed for `'static`
-8 | }
-  | - `owner` dropped here while still borrowed
+error[E0621]: explicit lifetime required in the type of `owner`
+  --> $DIR/non_static_owner.rs:11:1
+   |
+11 | sync_once_self_cell!(BorrowFromStack, &'_ String, Dependent<'_>,);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------^^^^^^^^^^^^^^^^^^
+   | |                                     |
+   | |                                     help: add explicit lifetime `'static` to the type of `owner`: `&'static String`
+   | lifetime `'static` required
+   |
+   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)

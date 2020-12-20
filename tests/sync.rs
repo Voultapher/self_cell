@@ -1,24 +1,33 @@
 // Unfortunately some unsafe is being used, this gets tested with miri.
 use crossbeam_utils::thread;
 
-use once_self_cell::sync::OnceSelfCell;
+use once_self_cell::sync_once_self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
-struct Ast<'input>(pub &'input str);
+struct Ast<'input>(pub Vec<&'input str>);
 
-fn ast_from_string<'input>(owner: &'input String) -> Ast<'input> {
-    Ast(&owner[2..5])
+impl<'a> From<&'a String> for Ast<'a> {
+    fn from(body: &'a String) -> Self {
+        Ast(vec![&body[2..5], &body[1..3]])
+    }
 }
+
+sync_once_self_cell!(
+    LazyAstCell,
+    String,
+    Ast<'_>,
+    derive(Clone, Debug, Eq, PartialEq)
+);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct LazyAst {
-    ast_cell: OnceSelfCell<String, Ast<'static>>,
+    ast_cell: LazyAstCell,
 }
 
 impl LazyAst {
     fn new(body: String) -> Self {
         LazyAst {
-            ast_cell: OnceSelfCell::new(body, ast_from_string),
+            ast_cell: LazyAstCell::new(body),
         }
     }
 
@@ -27,7 +36,7 @@ impl LazyAst {
     }
 
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
-        self.ast_cell.get_or_init_dependent::<Ast<'a>>()
+        self.ast_cell.get_or_init_dependent()
     }
 }
 
@@ -36,7 +45,7 @@ fn unsync_parse_ast() {
     let body = String::from("some longer string that ends now");
 
     // expected_ast is on the stack and lifetime dependent on body.
-    let expected_ast = ast_from_string(&body);
+    let expected_ast = Ast::from(&body);
 
     // But LazyAst is struct and can be freely moved and copied.
     let lazy_ast = LazyAst::new(body.clone());
@@ -69,7 +78,7 @@ fn return_self_ref_struct() {
     let expected_body = body.replace("\n", "");
 
     // expected_ast is on the stack and lifetime dependent on body.
-    let expected_ast = ast_from_string(&expected_body);
+    let expected_ast = Ast::from(&expected_body);
 
     let lazy_ast = make_ast_with_stripped_body(&body);
     assert_eq!(lazy_ast.get_body(), &expected_body);
@@ -85,7 +94,7 @@ fn share_across_threads() {
     let body = String::from("smoli");
 
     // expected_ast is on the stack and lifetime dependent on body.
-    let expected_ast = ast_from_string(&body);
+    let expected_ast = Ast::from(&body);
 
     // But LazyAst is struct and can be freely moved and copied.
     let lazy_ast = LazyAst::new(body.clone());
