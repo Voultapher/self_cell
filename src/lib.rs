@@ -39,7 +39,7 @@ impl crate::OnceCellCompatible<DependentInner> for UnsyncOnceCell {
 
 #[macro_export]
 macro_rules! unsync_once_self_cell {
-    ($StructName:ident, $Owner:ty, $Dependent:ty, $($StructMeta:meta),*) => {
+    ($StructName:ident, $Owner:ty, $Dependent:ty $(, $StructMeta:meta)* $(,)?) => {
         $(#[$StructMeta])*
         struct $StructName {
             unsafe_self_cell: ::once_self_cell::unsafe_once_self_cell::UnsafeOnceSelfCell<
@@ -121,7 +121,7 @@ unsafe impl Sync for SyncOnceCell {}
 
 #[macro_export]
 macro_rules! sync_once_self_cell {
-    ($StructName:ident, $Owner:ty, $Dependent:ty, $($StructMeta:meta),*) => {
+    ($StructName:ident, $Owner:ty, $Dependent:ty $(, $StructMeta:meta)* $(,)?) => {
         $(#[$StructMeta])*
         struct $StructName {
             unsafe_self_cell: ::once_self_cell::unsafe_once_self_cell::UnsafeOnceSelfCell<

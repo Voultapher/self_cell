@@ -96,7 +96,7 @@ fn no_derive_owner_type() {
         }
     }
 
-    unsync_once_self_cell!(NoDeriveCell, NoDerive, &'_ i32,);
+    unsync_once_self_cell!(NoDeriveCell, NoDerive, &'_ i32);
     let no_derive = NoDeriveCell::new(NoDerive(22));
     assert_eq!(no_derive.get_or_init_dependent(), &&22);
 }
@@ -110,7 +110,8 @@ fn multi_derive_generated_type() {
         String,
         &'_ String,
         derive(Clone),
-        derive(Debug)
+        derive(Debug),
+        derive(PartialEq)
     );
 
     let multi_derive = NoDeriveCell::new("abc".into());
@@ -121,6 +122,7 @@ fn multi_derive_generated_type() {
         .starts_with("NoDeriveCell { unsafe_self_cell: UnsafeOnceSelfCell { owner"));
     assert!(format!("{:?}", multi_derive_clone)
         .starts_with("NoDeriveCell { unsafe_self_cell: UnsafeOnceSelfCell { owner"));
+    assert_eq!(multi_derive, multi_derive_clone);
 }
 
 #[test]

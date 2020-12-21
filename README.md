@@ -62,7 +62,7 @@ unsync_once_self_cell!(
     LazyAstCell,
     String,
     Ast<'_>,
-    derive(Clone, Debug, Eq, PartialEq)
+    derive(Clone, Debug, Eq, PartialEq) // optional
 );
 
 #[derive(Debug, Clone, Eq, PartialEq)]
