@@ -17,7 +17,7 @@ unsync_once_self_cell!(NewStructName, Owner, Dependent<'_>, derive(Clone));
 impl NewStructName {
     fn new(owner: Owner) -> NewStructName { ... }
     fn get_owner<'a>(&'a self) -> &'a Owner { ... }
-    fn get_or_init_dependent>(&'a self) -> &'a Dependent<'a> { ... }
+    fn get_or_init_dependent<'a>(&'a self) -> &'a Dependent<'a> { ... }
 }
 ```
 
