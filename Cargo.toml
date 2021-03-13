@@ -1,11 +1,11 @@
 [package]
 name = "once_self_cell"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
-description = "Experimental, safe-to-use proc-macro-free self-referential structs in stable Rust."
+description = "Safe-to-use proc-macro-free self-referential structs in stable Rust."
 readme = "README.md"
 documentation = "https://docs.rs/once_self_cell"
 

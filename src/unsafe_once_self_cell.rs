@@ -61,23 +61,6 @@ where
             let dependent_ptr = Box::into_raw(Box::new(make_dependent(owner)));
 
             transmute::<*mut Dependent, VoidPtr>(dependent_ptr)
-
-            // let dependent_void_ptr = unsafe { transmute::<*mut Dependent, VoidPtr>(dependent_ptr) };
-            // let dependent_void_ptr = unsafe { transmute::<*mut Dependent, VoidPtr>(dependent_ptr) };
-
-            // For the sync variant to be correct creating drop_fn has to happen
-            // inside the same critical section.
-            // let drop_fn = |dependent_void_ptr: VoidPtr| {
-            //     // We assume this function is only called with a valid dependent_void_ptr.
-            //     let dependent_ptr =
-            //         unsafe { transmute::<VoidPtr, *mut Dependent>(dependent_void_ptr) };
-
-            //     let dependent_box = unsafe { Box::from_raw(dependent_ptr) };
-
-            //     drop(dependent_box);
-            // };
-
-            // dependent_void_ptr
         });
 
         // In this function we have access to the correct Dependent type and lifetime,
