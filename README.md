@@ -28,8 +28,6 @@ maintained and really heavy to compile due to its use of procedural macros.
 
 This alternative is `no-std`, uses no proc-macros, a total of ~20 lines unsafe and works on stable Rust, and is miri tested. With a total of less than 300 lines of implementation code, which consists mostly of type and trait wrangling, this crate aims to be a good minimal solution to the problem of self-referential structs.
 
-It has undergone community code review https://users.rust-lang.org/t/experimental-safe-to-use-proc-macro-free-self-referential-structs-in-stable-rust/52775 from seasoned Rust experts.
-
 ### Fast compile times
 
 ```
