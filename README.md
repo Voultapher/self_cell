@@ -1,10 +1,10 @@
-[<img alt="github" src="https://img.shields.io/badge/github-once__self__cell-8da0cb?style=for-the-badge&logo=github" height="20">](https://github.com/Voultapher/once_self_cell)
-[<img alt="crates.io" src="https://img.shields.io/badge/dynamic/json?color=fc8d62&label=crates.io&query=%24.crate.max_version&url=https%3A%2F%2Fcrates.io%2Fapi%2Fv1%2Fcrates%2Fonce_self_cell&style=for-the-badge&logo=rust" height="20">](https://crates.io/crates/once_self_cell)
-[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-once__self__cell-66c2a5?style=for-the-badge&logoColor=white&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDUxMiA1MTIiPjxwYXRoIGZpbGw9IiNmNWY1ZjUiIGQ9Ik00ODguNiAyNTAuMkwzOTIgMjE0VjEwNS41YzAtMTUtOS4zLTI4LjQtMjMuNC0zMy43bC0xMDAtMzcuNWMtOC4xLTMuMS0xNy4xLTMuMS0yNS4zIDBsLTEwMCAzNy41Yy0xNC4xIDUuMy0yMy40IDE4LjctMjMuNCAzMy43VjIxNGwtOTYuNiAzNi4yQzkuMyAyNTUuNSAwIDI2OC45IDAgMjgzLjlWMzk0YzAgMTMuNiA3LjcgMjYuMSAxOS45IDMyLjJsMTAwIDUwYzEwLjEgNS4xIDIyLjEgNS4xIDMyLjIgMGwxMDMuOS01MiAxMDMuOSA1MmMxMC4xIDUuMSAyMi4xIDUuMSAzMi4yIDBsMTAwLTUwYzEyLjItNi4xIDE5LjktMTguNiAxOS45LTMyLjJWMjgzLjljMC0xNS05LjMtMjguNC0yMy40LTMzLjd6TTM1OCAyMTQuOGwtODUgMzEuOXYtNjguMmw4NS0zN3Y3My4zek0xNTQgMTA0LjFsMTAyLTM4LjIgMTAyIDM4LjJ2LjZsLTEwMiA0MS40LTEwMi00MS40di0uNnptODQgMjkxLjFsLTg1IDQyLjV2LTc5LjFsODUtMzguOHY3NS40em0wLTExMmwtMTAyIDQxLjQtMTAyLTQxLjR2LS42bDEwMi0zOC4yIDEwMiAzOC4ydi42em0yNDAgMTEybC04NSA0Mi41di03OS4xbDg1LTM4Ljh2NzUuNHptMC0xMTJsLTEwMiA0MS40LTEwMi00MS40di0uNmwxMDItMzguMiAxMDIgMzguMnYuNnoiPjwvcGF0aD48L3N2Zz4K" height="20">](https://docs.rs/once_self_cell)
+[<img alt="github" src="https://img.shields.io/badge/github-once__self__cell-8da0cb?style=for-the-badge&logo=github" height="20">](https://github.com/Voultapher/self_cell)
+[<img alt="crates.io" src="https://img.shields.io/badge/dynamic/json?color=fc8d62&label=crates.io&query=%24.crate.max_version&url=https%3A%2F%2Fcrates.io%2Fapi%2Fv1%2Fcrates%2Fonce_self_cell&style=for-the-badge&logo=rust" height="20">](https://crates.io/crates/self_cell)
+[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-once__self__cell-66c2a5?style=for-the-badge&logoColor=white&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDUxMiA1MTIiPjxwYXRoIGZpbGw9IiNmNWY1ZjUiIGQ9Ik00ODguNiAyNTAuMkwzOTIgMjE0VjEwNS41YzAtMTUtOS4zLTI4LjQtMjMuNC0zMy43bC0xMDAtMzcuNWMtOC4xLTMuMS0xNy4xLTMuMS0yNS4zIDBsLTEwMCAzNy41Yy0xNC4xIDUuMy0yMy40IDE4LjctMjMuNCAzMy43VjIxNGwtOTYuNiAzNi4yQzkuMyAyNTUuNSAwIDI2OC45IDAgMjgzLjlWMzk0YzAgMTMuNiA3LjcgMjYuMSAxOS45IDMyLjJsMTAwIDUwYzEwLjEgNS4xIDIyLjEgNS4xIDMyLjIgMGwxMDMuOS01MiAxMDMuOSA1MmMxMC4xIDUuMSAyMi4xIDUuMSAzMi4yIDBsMTAwLTUwYzEyLjItNi4xIDE5LjktMTguNiAxOS45LTMyLjJWMjgzLjljMC0xNS05LjMtMjguNC0yMy40LTMzLjd6TTM1OCAyMTQuOGwtODUgMzEuOXYtNjguMmw4NS0zN3Y3My4zek0xNTQgMTA0LjFsMTAyLTM4LjIgMTAyIDM4LjJ2LjZsLTEwMiA0MS40LTEwMi00MS40di0uNnptODQgMjkxLjFsLTg1IDQyLjV2LTc5LjFsODUtMzguOHY3NS40em0wLTExMmwtMTAyIDQxLjQtMTAyLTQxLjR2LS42bDEwMi0zOC4yIDEwMiAzOC4ydi42em0yNDAgMTEybC04NSA0Mi41di03OS4xbDg1LTM4Ljh2NzUuNHptMC0xMTJsLTEwMiA0MS40LTEwMi00MS40di0uNmwxMDItMzguMiAxMDIgMzguMnYuNnoiPjwvcGF0aD48L3N2Zz4K" height="20">](https://docs.rs/self_cell)
 
 # OnceSelfCell
 
-`once_self_cell` provides two macros, `unsync_once_self_cell` and `sync_once_self_cell`. These generate a struct that can be assigned to at most once and provide direct reference access to the stored contents,
+`self_cell` provides two macros, `unsync_once_self_cell` and `sync_once_self_cell`. These generate a struct that can be assigned to at most once and provide direct reference access to the stored contents,
 **and** can store a dependent value, with a lifetime depending on the owner.
 This enables safe-to-use proc-macro-free self-referential structs in stable Rust,
 without leaking the struct internal lifetime. In a nutshell,
@@ -36,9 +36,9 @@ It has undergone community code review https://users.rust-lang.org/t/experimenta
 $ rm -rf target && cargo +nightly build -Z timings
 
 Compiling once_cell v1.5.2
-Compiling once_self_cell v0.6.0
+Compiling self_cell v0.6.0
 Completed once_cell v1.5.2 in 0.3s
-Completed once_self_cell v0.5.0 in 0.3s
+Completed self_cell v0.5.0 in 0.3s
 ```
 
 Measurements done a slow and old laptop.
@@ -48,7 +48,7 @@ Because it does **not** use proc-macros, compile-times are fast.
 ### A motivating use case
 
 ```rust
-use once_self_cell::unsync_once_self_cell;
+use self_cell::unsync_once_self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
 struct Ast<'input>(pub Vec<&'input str>);
@@ -109,7 +109,7 @@ struct LazyAst {
 Putting the things that belong together, together. Yet that's currently not
 possible in Rust. `OnceSelfCell` aims to fill this gap.
 
-With `once_self_cell` the above becomes:
+With `self_cell` the above becomes:
 
 ```rust
 unsync_once_self_cell!(
@@ -196,13 +196,13 @@ Please respect the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) when contributing.
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning. For the versions available,
-see the [tags on this repository](https://github.com/Voultapher/once_self_cell/tags).
+see the [tags on this repository](https://github.com/Voultapher/self_cell/tags).
 
 ## Authors
 
 * **Lukas Bergdoll** - *Initial work* - [Voultapher](https://github.com/Voultapher)
 
-See also the list of [contributors](https://github.com/Voultapher/once_self_cell/contributors)
+See also the list of [contributors](https://github.com/Voultapher/self_cell/contributors)
 who participated in this project.
 
 ## License

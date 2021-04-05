@@ -9,7 +9,7 @@ use impls::impls;
 
 use once_cell::unsync::OnceCell;
 
-use once_self_cell::self_cell;
+use self_cell::self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
 struct Ast<'input>(pub Vec<&'input str>);

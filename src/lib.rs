@@ -111,7 +111,7 @@ macro_rules! _covariant_access {
         // For types that are not covariant it's unsafe to allow
         // returning direct references.
         // For example a lifetime that is too short could be chosen:
-        // See https://github.com/Voultapher/once_self_cell/issues/5
+        // See https://github.com/Voultapher/self_cell/issues/5
     };
     ($x:ident, $Dependent:ident) => {
         compile_error!("This macro only accepts `covariant` or `not_covariant`");

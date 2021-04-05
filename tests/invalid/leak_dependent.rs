@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use once_self_cell::self_cell;
+use self_cell::self_cell;
 
 struct NotCovariant<'a>(Cell<&'a String>);
 

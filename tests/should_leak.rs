@@ -1,4 +1,4 @@
-use once_self_cell::self_cell;
+use self_cell::self_cell;
 
 #[test]
 #[ignore]
