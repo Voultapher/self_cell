@@ -1,175 +1,179 @@
-use once_cell::sync::OnceCell as Sync_OnceCell;
-use once_cell::unsync::OnceCell as Unsync_OnceCell;
+#![no_std]
 
-use crate::unsafe_once_self_cell::DependentInner;
+pub extern crate alloc;
 
-pub mod unsafe_once_self_cell;
+// use once_cell::sync::OnceCell as Sync_OnceCell;
+// use once_cell::unsync::OnceCell as Unsync_OnceCell;
 
-pub trait OnceCellCompatible<T> {
-    fn new() -> Self;
-    fn get(&self) -> Option<&T>;
-    fn get_or_init<F>(&self, f: F) -> &T
-    where
-        F: FnOnce() -> T;
-    fn take(&mut self) -> Option<T>;
-}
+// use crate::unsafe_once_self_cell::DependentInner;
 
-// HKT sigh.
+// pub mod unsafe_once_self_cell;
 
-#[derive(Debug)]
-pub struct UnsyncOnceCell(Unsync_OnceCell<DependentInner>);
-
-impl crate::OnceCellCompatible<DependentInner> for UnsyncOnceCell {
-    fn new() -> Self {
-        UnsyncOnceCell(Unsync_OnceCell::new())
-    }
-    fn get(&self) -> Option<&DependentInner> {
-        self.0.get()
-    }
-    fn get_or_init<F>(&self, f: F) -> &DependentInner
-    where
-        F: FnOnce() -> DependentInner,
-    {
-        self.0.get_or_init(f)
-    }
-    fn take(&mut self) -> Option<DependentInner> {
-        self.0.take()
-    }
-}
-
-#[macro_export]
-macro_rules! unsync_once_self_cell {
-    ($StructName:ident, $Owner:ty, $Dependent:ty $(, $StructMeta:meta)* $(,)?) => {
-        $(#[$StructMeta])*
-        struct $StructName {
-            unsafe_self_cell: ::once_self_cell::unsafe_once_self_cell::UnsafeOnceSelfCell<
-                $Owner,
-                ::once_self_cell::UnsyncOnceCell,
-            >,
-        }
-
-        impl $StructName {
-            pub fn new(owner: $Owner) -> Self {
-                Self {
-                    unsafe_self_cell: unsafe {
-                        ::once_self_cell::unsafe_once_self_cell::UnsafeOnceSelfCell::new(owner)
-                    },
-                }
-            }
-
-            pub fn get_owner<'a>(&'a self) -> &'a $Owner {
-                unsafe { self.unsafe_self_cell.get_owner() }
-            }
-
-            pub fn get_or_init_dependent<'a>(&'a self) -> &'a $Dependent {
-                unsafe {
-                    self.unsafe_self_cell
-                        .get_or_init_dependent(|owner_ref| owner_ref.into())
-                }
-            }
-
-            pub fn dependent_is_none(&self) -> bool {
-                self.unsafe_self_cell.dependent_is_none()
-            }
-        }
-
-        impl Drop for $StructName {
-            fn drop(&mut self) {
-                unsafe {
-                    self.unsafe_self_cell.drop_dependent::<$Dependent>();
-                }
-            }
-        }
-    };
-}
-
-#[derive(Debug)]
-pub struct SyncOnceCell(Sync_OnceCell<DependentInner>);
-
-impl crate::OnceCellCompatible<DependentInner> for SyncOnceCell {
-    fn new() -> Self {
-        SyncOnceCell(Sync_OnceCell::new())
-    }
-    fn get(&self) -> Option<&DependentInner> {
-        self.0.get()
-    }
-    fn get_or_init<F>(&self, f: F) -> &DependentInner
-    where
-        F: FnOnce() -> DependentInner,
-    {
-        self.0.get_or_init(f)
-    }
-    fn take(&mut self) -> Option<DependentInner> {
-        self.0.take()
-    }
-}
-
-// A mutable pointer that only gets changed in 2 ways:
-//
-// 1.
-// get_or_init, sync::OnceCell takes care of establishing a happens-before
-// relationship between a potential write and read of the lazy init.
-//
-// 2.
-// drop_dependent_unconditional, might overwrite the OnceCell with it's
-// default empty state. This hinges on OnceCell::take pulling out the
-// value only exactly once even if called concurrently. Which is given,
-// because the Rust type system ensures only exactly one &mut can exist
-// at any time. And a &mut is required for calling drop_dependent_unconditional.
-unsafe impl Send for SyncOnceCell {}
-unsafe impl Sync for SyncOnceCell {}
-
-#[macro_export]
-macro_rules! sync_once_self_cell {
-    ($StructName:ident, $Owner:ty, $Dependent:ty $(, $StructMeta:meta)* $(,)?) => {
-        $(#[$StructMeta])*
-        struct $StructName {
-            unsafe_self_cell: ::once_self_cell::unsafe_once_self_cell::UnsafeOnceSelfCell<
-                $Owner,
-                ::once_self_cell::SyncOnceCell,
-            >,
-        }
-
-        impl $StructName {
-            pub fn new(owner: $Owner) -> Self {
-                Self {
-                    unsafe_self_cell: unsafe {
-                        ::once_self_cell::unsafe_once_self_cell::UnsafeOnceSelfCell::new(owner)
-                    },
-                }
-            }
-
-            pub fn get_owner<'a>(&'a self) -> &'a $Owner {
-                unsafe { self.unsafe_self_cell.get_owner() }
-            }
-
-            pub fn get_or_init_dependent<'a>(&'a self) -> &'a $Dependent {
-                unsafe {
-                    self.unsafe_self_cell
-                        .get_or_init_dependent(|owner_ref| owner_ref.into())
-                }
-            }
-
-            pub fn dependent_is_none(&self) -> bool {
-                self.unsafe_self_cell.dependent_is_none()
-            }
-        }
-
-        impl Drop for $StructName {
-            fn drop(&mut self) {
-                unsafe {
-                    self.unsafe_self_cell.drop_dependent::<$Dependent>();
-                }
-            }
-        }
-    };
-}
-
-// pub mod custom {
-//     // User provided OnceCell. Has to implement OnceCellCompatible.
-//     pub type OnceSelfCell<Owner, DependentStaticLifetime, DependentCell> =
-//         crate::once_self_cell::OnceSelfCell<Owner, DependentStaticLifetime, DependentCell>;
+// pub trait OnceCellCompatible<T> {
+//     fn new() -> Self;
+//     fn get(&self) -> Option<&T>;
+//     fn get_or_init<F>(&self, f: F) -> &T
+//     where
+//         F: FnOnce() -> T;
+//     fn take(&mut self) -> Option<T>;
 // }
+
+// // HKT sigh.
+
+// #[derive(Debug)]
+// pub struct UnsyncOnceCell(Unsync_OnceCell<DependentInner>);
+
+// impl crate::OnceCellCompatible<DependentInner> for UnsyncOnceCell {
+//     fn new() -> Self {
+//         UnsyncOnceCell(Unsync_OnceCell::new())
+//     }
+//     fn get(&self) -> Option<&DependentInner> {
+//         self.0.get()
+//     }
+//     fn get_or_init<F>(&self, f: F) -> &DependentInner
+//     where
+//         F: FnOnce() -> DependentInner,
+//     {
+//         self.0.get_or_init(f)
+//     }
+//     fn take(&mut self) -> Option<DependentInner> {
+//         self.0.take()
+//     }
+// }
+
+// #[macro_export]
+// macro_rules! unsync_once_self_cell {
+//     ($StructName:ident, $Owner:ty, $Dependent:ty $(, $StructMeta:meta)* $(,)?) => {
+//         $(#[$StructMeta])*
+//         struct $StructName {
+//             unsafe_self_cell: $crate::unsafe_once_self_cell::UnsafeOnceSelfCell<
+//                 $Owner,
+//                 $crate::UnsyncOnceCell,
+//             >,
+//         }
+
+//         impl $StructName {
+//             pub fn new(owner: $Owner) -> Self {
+//                 Self {
+//                     unsafe_self_cell: unsafe {
+//                         $crate::unsafe_once_self_cell::UnsafeOnceSelfCell::new(owner)
+//                     },
+//                 }
+//             }
+
+//             pub fn get_owner<'a>(&'a self) -> &'a $Owner {
+//                 unsafe { self.unsafe_self_cell.get_owner() }
+//             }
+
+//             pub fn get_or_init_dependent<'a>(&'a self) -> &'a $Dependent {
+//                 unsafe {
+//                     self.unsafe_self_cell
+//                         .get_or_init_dependent(|owner_ref| owner_ref.into())
+//                 }
+//             }
+
+//             pub fn dependent_is_none(&self) -> bool {
+//                 self.unsafe_self_cell.dependent_is_none()
+//             }
+//         }
+
+//         impl Drop for $StructName {
+//             fn drop(&mut self) {
+//                 unsafe {
+//                     self.unsafe_self_cell.drop_dependent::<$Dependent>();
+//                 }
+//             }
+//         }
+//     };
+// }
+
+// #[derive(Debug)]
+// pub struct SyncOnceCell(Sync_OnceCell<DependentInner>);
+
+// impl crate::OnceCellCompatible<DependentInner> for SyncOnceCell {
+//     fn new() -> Self {
+//         SyncOnceCell(Sync_OnceCell::new())
+//     }
+//     fn get(&self) -> Option<&DependentInner> {
+//         self.0.get()
+//     }
+//     fn get_or_init<F>(&self, f: F) -> &DependentInner
+//     where
+//         F: FnOnce() -> DependentInner,
+//     {
+//         self.0.get_or_init(f)
+//     }
+//     fn take(&mut self) -> Option<DependentInner> {
+//         self.0.take()
+//     }
+// }
+
+// // A mutable pointer that only gets changed in 2 ways:
+// //
+// // 1.
+// // get_or_init, sync::OnceCell takes care of establishing a happens-before
+// // relationship between a potential write and read of the lazy init.
+// //
+// // 2.
+// // drop_dependent_unconditional, might overwrite the OnceCell with it's
+// // default empty state. This hinges on OnceCell::take pulling out the
+// // value only exactly once even if called concurrently. Which is given,
+// // because the Rust type system ensures only exactly one &mut can exist
+// // at any time. And a &mut is required for calling drop_dependent_unconditional.
+// unsafe impl Send for SyncOnceCell {}
+// unsafe impl Sync for SyncOnceCell {}
+
+// #[macro_export]
+// macro_rules! sync_once_self_cell {
+//     ($StructName:ident, $Owner:ty, $Dependent:ty $(, $StructMeta:meta)* $(,)?) => {
+//         $(#[$StructMeta])*
+//         struct $StructName {
+//             unsafe_self_cell: $crate::unsafe_once_self_cell::UnsafeOnceSelfCell<
+//                 $Owner,
+//                 $crate::SyncOnceCell,
+//             >,
+//         }
+
+//         impl $StructName {
+//             pub fn new(owner: $Owner) -> Self {
+//                 Self {
+//                     unsafe_self_cell: unsafe {
+//                         $crate::unsafe_once_self_cell::UnsafeOnceSelfCell::new(owner)
+//                     },
+//                 }
+//             }
+
+//             pub fn get_owner<'a>(&'a self) -> &'a $Owner {
+//                 unsafe { self.unsafe_self_cell.get_owner() }
+//             }
+
+//             pub fn get_or_init_dependent<'a>(&'a self) -> &'a $Dependent {
+//                 unsafe {
+//                     self.unsafe_self_cell
+//                         .get_or_init_dependent(|owner_ref| owner_ref.into())
+//                 }
+//             }
+
+//             pub fn dependent_is_none(&self) -> bool {
+//                 self.unsafe_self_cell.dependent_is_none()
+//             }
+//         }
+
+//         impl Drop for $StructName {
+//             fn drop(&mut self) {
+//                 unsafe {
+//                     self.unsafe_self_cell.drop_dependent::<$Dependent>();
+//                 }
+//             }
+//         }
+//     };
+// }
+
+// // pub mod custom {
+// //     // User provided OnceCell. Has to implement OnceCellCompatible.
+// //     pub type OnceSelfCell<Owner, DependentStaticLifetime, DependentCell> =
+// //         crate$crate::OnceSelfCell<Owner, DependentStaticLifetime, DependentCell>;
+// // }
 
 pub mod unsafe_self_cell;
 
@@ -180,7 +184,7 @@ macro_rules! _covariant_access {
         fn borrow_dependent<'a>(&'a self) -> &'a $Dependent {
             struct _Covariant<'b>($Dependent<'b>);
 
-            fn _assert_covariance<'a: 'b, 'b>(x: _Covariant<'a>) -> _Covariant<'b> {
+            fn _assert_covariance<'x: 'y, 'y>(x: _Covariant<'x>) -> _Covariant<'y> {
                 //  This function only compiles for covariant types.
                 x // Change the macro invocation to not_covariant.
             }
@@ -223,10 +227,7 @@ macro_rules! _impl_automatic_derive {
                         self.borrow_owner(),
                         dependent
                     )
-                    .unwrap();
-                });
-
-                Ok(())
+                })
             }
         }
     };
@@ -270,33 +271,56 @@ macro_rules! self_cell {
         $Covariance:ident
         $(, $StructMeta:meta)* $(,)?
     ) => {
+        // use alloc::alloc::{alloc, Layout};
+
         $(#[$StructMeta])*
         struct $StructName {
-            unsafe_self_cell: ::once_self_cell::unsafe_self_cell::UnsafeSelfCell<
+            unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
                 $Owner,
                 $Dependent<'static>
             >
         }
 
         impl $StructName {
-            fn new<'a>(owner: $Owner) -> Self {
+            fn new(owner: $Owner) -> Self { unsafe {
+                // All this has to happen here, because there is not good way
+                // of passing the appropriate logic into UnsafeSelfCell::new
+                // short of assuming Dependent<'static> is the same as
+                // Dependent<'a>, which I'm not confident is safe.
 
-                // struct DependentStatic<'a>($Dependent);
+                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
-                Self { unsafe_self_cell: unsafe {
-                    ::once_self_cell::unsafe_self_cell::UnsafeSelfCell::new::<$Dependent<'a>>(owner)
-                }}
-            }
+                let layout = $crate::alloc::alloc::Layout::from_size_align_unchecked(
+                    core::mem::size_of::<JoinedCell>(),
+                    core::mem::align_of::<JoinedCell>(),
+                );
+
+                let joined_void_ptr = $crate::alloc::alloc::alloc(layout);
+
+                let joined_ptr =
+                    core::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
+
+                // Move owner into newly allocated space.
+                core::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
+
+                // Initialize dependent with owner reference in final place.
+                core::ptr::addr_of_mut!((*joined_ptr).dependent)
+                    .write((&(*joined_ptr).owner).into());
+
+                Self { unsafe_self_cell:
+                    $crate::unsafe_self_cell::UnsafeSelfCell::new(joined_void_ptr)
+                }
+            }}
 
             fn borrow_owner<'a>(&'a self) -> &'a $Owner {
                 unsafe { self.unsafe_self_cell.borrow_owner::<$Dependent<'a>>() }
             }
 
-            fn with_dependent(&self, func: impl for<'a> FnOnce(&'a $Dependent<'a>)) {
-                func(unsafe { self.unsafe_self_cell.borrow_dependent() });
+            fn with_dependent<Ret>(&self, func: impl for<'a> FnOnce(&'a $Dependent<'a>) -> Ret) -> Ret {
+                func(unsafe { self.unsafe_self_cell.borrow_dependent() })
             }
 
-            ::once_self_cell::_covariant_access!($Covariance, $Dependent);
+            $crate::_covariant_access!($Covariance, $Dependent);
         }
 
         impl Drop for $StructName {
@@ -310,7 +334,7 @@ macro_rules! self_cell {
         // The user has to choose which traits can and should be automatically
         // implemented for the cell.
         $(
-            ::once_self_cell::_impl_automatic_derive!($Automatic_derive, $StructName);
+            $crate::_impl_automatic_derive!($Automatic_derive, $StructName);
         )*
     };
 }

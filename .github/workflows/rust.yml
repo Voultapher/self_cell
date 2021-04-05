@@ -32,7 +32,12 @@ jobs:
       shell: bash
 
     - name: Run tests x86_64-unknown-linux-gnu
-      run: cargo miri test --verbose --target x86_64-unknown-linux-gnu
+      run: |
+        cargo miri test --verbose --target x86_64-unknown-linux-gnu
+        MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test --verbose --target x86_64-unknown-linux-gnu --test should_leak -- --ignored
+
     - name: Run tests mips64-unknown-linux-gnuabi64
-      run: cargo miri test --verbose --target mips64-unknown-linux-gnuabi64
+      run: |
+        cargo miri test --verbose --target mips64-unknown-linux-gnuabi64
+        MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test --verbose --target mips64-unknown-linux-gnuabi64 --test should_leak -- --ignored
 
