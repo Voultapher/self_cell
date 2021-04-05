@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-use core::mem::{align_of, size_of, transmute};
+use core::mem::transmute;
 use core::ptr::drop_in_place;
 
 extern crate alloc;
@@ -125,10 +125,7 @@ impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
 
         drop_in_place(joined_ptr);
 
-        let layout = Layout::from_size_align_unchecked(
-            size_of::<JoinedCell<Owner, Dependent>>(),
-            align_of::<JoinedCell<Owner, Dependent>>(),
-        );
+        let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
 
         dealloc(self.joined_void_ptr, layout);
     }

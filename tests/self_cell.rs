@@ -1,8 +1,13 @@
 // The unsafe being used gets tested with miri in the CI.
 
-use core::fmt::Debug;
+use std::convert::TryInto;
+use std::fmt::Debug;
+
+use crossbeam_utils::thread;
 
 use impls::impls;
+
+use once_cell::unsync::OnceCell;
 
 use once_self_cell::self_cell;
 
@@ -18,6 +23,7 @@ impl<'a> From<&'a String> for Ast<'a> {
 self_cell!(
     PackedAstCell,
     {Clone, Debug, PartialEq, Eq, Hash},
+    from,
     String,
     Ast,
     covariant,
@@ -40,7 +46,7 @@ impl PackedAst {
         self.ast_cell.borrow_owner()
     }
 
-    fn with_ast(&self, func: impl for<'a> FnOnce(&'a Ast<'a>)) {
+    fn with_ast(&self, func: impl for<'a> FnOnce(&'a String, &'a Ast<'a>)) {
         self.ast_cell.with_dependent(func)
     }
 
@@ -51,7 +57,7 @@ impl PackedAst {
 
 fn assert_with_ast(packed_ast: &PackedAst, expected_ast: &Ast) {
     let mut visited = false;
-    packed_ast.with_ast(|ast| {
+    packed_ast.with_ast(|_, ast| {
         assert_eq!(ast, expected_ast);
         visited = true;
     });
@@ -119,6 +125,90 @@ fn return_self_ref_struct() {
 }
 
 #[test]
+fn failable_constructor_success() {
+    #[derive(Debug, Clone, PartialEq)]
+    struct Owner(String);
+
+    impl<'a> TryInto<Ast<'a>> for &'a Owner {
+        type Error = i32;
+
+        fn try_into(self) -> Result<Ast<'a>, Self::Error> {
+            Ok(Ast::from(&self.0))
+        }
+    }
+
+    self_cell!(AstOk, { Debug }, try_from, Owner, Ast, covariant);
+
+    let owner = Owner("This string is no trout".into());
+    let expected_ast = Ast::from(&owner.0);
+
+    let ast_cell_result: Result<AstOk, i32> = AstOk::try_from(owner.clone());
+    assert!(ast_cell_result.is_ok());
+
+    let ast_cell = ast_cell_result.unwrap();
+    assert_eq!(ast_cell.borrow_owner(), &owner);
+    assert_eq!(ast_cell.borrow_dependent(), &expected_ast);
+}
+
+#[test]
+fn failable_constructor_fail() {
+    #[derive(Debug, Clone, PartialEq)]
+    struct Owner(String);
+
+    impl<'a> TryInto<Ast<'a>> for &'a Owner {
+        type Error = i32;
+
+        fn try_into(self) -> Result<Ast<'a>, Self::Error> {
+            Err(22)
+        }
+    }
+
+    self_cell!(AstOk, { Debug }, try_from, Owner, Ast, covariant);
+
+    let owner = Owner("This string is no trout".into());
+
+    let ast_cell_result: Result<AstOk, i32> = AstOk::try_from(owner.clone());
+    assert!(ast_cell_result.is_err());
+
+    let err = ast_cell_result.unwrap_err();
+    assert_eq!(err, 22);
+}
+
+#[test]
+fn catch_panic_in_from() {
+    // This pattern allows users to opt into not leaking memory on panic during
+    // cell construction.
+
+    #[derive(Debug, Clone, PartialEq)]
+    struct Owner(String);
+
+    #[derive(Debug)]
+    struct PanicCtor<'a>(&'a i32);
+
+    impl<'a> PanicCtor<'a> {
+        fn new(_: &'a Owner) -> Self {
+            let _stack_vec = vec![23, 44, 5];
+            panic!()
+        }
+    }
+
+    impl<'a> TryInto<PanicCtor<'a>> for &'a Owner {
+        type Error = Box<dyn std::any::Any + Send + 'static>;
+
+        fn try_into(self) -> Result<PanicCtor<'a>, Self::Error> {
+            std::panic::catch_unwind(|| PanicCtor::new(&self))
+        }
+    }
+
+    self_cell!(NoLeakCell, { Debug }, try_from, Owner, PanicCtor, covariant);
+
+    let owner = Owner("This string is no trout".into());
+
+    let ast_cell_result = NoLeakCell::try_from(owner.clone());
+    assert!(ast_cell_result.is_err());
+}
+
+#[test]
 fn no_derive_owner_type() {
     #[derive(Debug)]
     struct NoDerive(i32);
@@ -132,7 +222,14 @@ fn no_derive_owner_type() {
         }
     }
 
-    self_cell!(NoDeriveCell, { Debug }, NoDerive, Dependent, covariant);
+    self_cell!(
+        NoDeriveCell,
+        { Debug },
+        from,
+        NoDerive,
+        Dependent,
+        covariant
+    );
     let no_derive = NoDeriveCell::new(NoDerive(22));
     assert_eq!(no_derive.borrow_dependent().0, &22);
 }
@@ -152,7 +249,7 @@ impl<'a> From<&'a String> for NotSend<'a> {
     }
 }
 
-self_cell!(NotSendCell, {}, String, NotSend, covariant);
+self_cell!(NotSendCell, {}, from, String, NotSend, covariant);
 
 #[test]
 fn not_send() {
@@ -175,6 +272,113 @@ fn not_sync() {
 }
 
 #[test]
+fn custom_drop() {
+    #[derive(Debug, PartialEq, Eq)]
+    struct Ref<'a, T: Debug>(&'a T);
+
+    impl<'a, T: Debug> Drop for Ref<'a, T> {
+        fn drop(&mut self) {
+            println!("{:?}", self.0);
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    enum Void {}
+
+    type OV = Option<Vec<Void>>;
+    type OvRef<'a> = Ref<'a, OV>;
+
+    impl<'a> Into<Ref<'a, OV>> for &'a OV {
+        fn into(self) -> Ref<'a, OV> {
+            Ref(self)
+        }
+    }
+
+    self_cell!(CustomDrop, {Debug, PartialEq, Eq}, from, OV, OvRef, covariant);
+
+    let cell = CustomDrop::new(None);
+
+    let expected_dependent = Ref::<'_, OV>(&None);
+
+    assert_eq!(cell.borrow_dependent(), &expected_dependent);
+}
+
+#[test]
+fn share_across_threads() {
+    // drop_joined takes &mut self, so that's not a thread concern anyway.
+    // And get_or_init_dependent should be as thread compatible as OnceCell.
+    // Owner never gets changed after init.
+
+    let body = String::from("smoli");
+
+    // expected_ast is on the stack and lifetime dependent on body.
+    let expected_ast = Ast::from(&body);
+
+    // But PackedAst is struct and can be freely moved and copied.
+    let packed_ast = PackedAst::new(body.clone());
+
+    thread::scope(|s| {
+        s.spawn(|_| {
+            assert_eq!(packed_ast.get_body(), &body);
+            assert_eq!(packed_ast.get_ast(), &expected_ast);
+        });
+
+        s.spawn(|_| {
+            assert_eq!(packed_ast.get_body(), &body);
+            assert_eq!(packed_ast.get_ast(), &expected_ast);
+        });
+
+        assert_eq!(packed_ast.get_body(), &body);
+        assert_eq!(packed_ast.get_ast(), &expected_ast);
+    })
+    .unwrap();
+}
+
+#[test]
+fn lazy_ast() {
+    #[derive(Debug)]
+    struct LazyAst<'a>(OnceCell<Ast<'a>>);
+
+    impl<'a> From<&'a String> for LazyAst<'a> {
+        fn from(_: &'a String) -> Self {
+            Self(OnceCell::new())
+        }
+    }
+
+    self_cell!(
+        LazyAstCell,
+        {Clone, Debug, PartialEq, Eq, Hash},
+        from,
+        String,
+        LazyAst,
+        not_covariant,
+        doc(hidden)
+    );
+
+    let body = String::from("How thou shall not see what trouts shall see");
+
+    let expected_ast = Ast::from(&body);
+
+    let lazy_ast = LazyAstCell::new(body.clone());
+    assert_eq!(lazy_ast.borrow_owner(), &body);
+    lazy_ast.with_dependent(|owner, dependent| {
+        assert_eq!(owner, &body);
+        assert!(dependent.0.get().is_none());
+    });
+
+    lazy_ast.with_dependent(|owner, dependent| {
+        assert_eq!(owner, &body);
+        assert_eq!(dependent.0.get_or_init(|| owner.into()), &expected_ast);
+    });
+
+    lazy_ast.with_dependent(|owner, dependent| {
+        assert_eq!(owner, &body);
+        assert!(dependent.0.get().is_some());
+        assert_eq!(dependent.0.get_or_init(|| owner.into()), &expected_ast);
+    });
+}
+
+#[test]
 // Not supported by miri isolation.
 #[cfg_attr(miri, ignore)]
 // Closure paths slashes show up as diff error on Windows.
@@ -183,6 +387,3 @@ fn invalid_compile() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/invalid/*.rs");
 }
-
-// TODO panic in from
-// TODO try_new

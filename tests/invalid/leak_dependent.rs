@@ -10,9 +10,9 @@ impl<'a> From<&'a String> for NotCovariant<'a> {
     }
 }
 
-self_cell!(NoCov, {}, String, NotCovariant, not_covariant);
+self_cell!(NoCov, {}, from, String, NotCovariant, not_covariant);
 
 fn main() {
     let cell = NoCov::new("hi this is no good".into());
-    let _leaked_ref = cell.with_dependent(|dependent| dependent);
+    let _leaked_ref = cell.with_dependent(|_, dependent| dependent);
 }
