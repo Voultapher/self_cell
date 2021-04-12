@@ -16,6 +16,12 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Run examples
+      run: |
+        cd examples
+        cargo run --bin fallible_dependent_construction
+        cargo run --bin lazy_ast
+        cargo run --bin no_leak_panic
   
   miri:
     runs-on: ubuntu-latest

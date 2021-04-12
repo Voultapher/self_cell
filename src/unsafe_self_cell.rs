@@ -18,7 +18,7 @@ use alloc::alloc::{dealloc, Layout};
 // 4. The only access to owner and dependent is as immutable reference.
 // 5. owner lives longer than dependent.
 
-// #[repr(C)] // TODO is this necessary?
+#[doc(hidden)]
 pub struct JoinedCell<Owner, Dependent> {
     pub owner: Owner,
     pub dependent: Dependent,
@@ -26,6 +26,7 @@ pub struct JoinedCell<Owner, Dependent> {
 
 // Library controlled struct that marks all accesses as unsafe.
 // Because the macro generated struct impl can be extended, could be unsafe.
+#[doc(hidden)]
 pub struct UnsafeSelfCell<Owner: 'static, DependentStatic: 'static> {
     // It's crucial these members are private.
     // *mut even though *const might be enough to mark this type itself
