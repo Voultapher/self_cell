@@ -325,7 +325,7 @@ macro_rules! _impl_automatic_derive {
 ///
 ///   * **try_from**: This generates a `fn try_from<'a>(owner: $Owner) -> Result<Self, <&'a $Owner as TryInto<$Dependent<'a>>>::Error>` constructor, which allows fallible construction without having to check for failure every time dependent is accessed. For this to work `<&'a $Owner>::TryInto<$Dependent<'a>>` has to be implemented.
 ///
-/// NOTE: If `<&'a $Owner>::Into<$Dependent<'a>>` panics, the value of owner and a heap struct will be leaked. This is safe, but might not be what you want. See [How to avoid leaking memory if `Dependen::from(&Owner)` panics](https://github.com/Voultapher/once_self_cell/tree/main/examples/no_leak_panic_from).
+/// NOTE: If `<&'a $Owner>::Into<$Dependent<'a>>` panics, the value of owner and a heap struct will be leaked. This is safe, but might not be what you want. See [How to avoid leaking memory if `Dependen::from(&Owner)` panics](https://github.com/Voultapher/once_self_cell/tree/main/examples/no_leak_panic).
 ///
 /// - `$Owner:ty` Type of owner. This has to have a `'static` lifetime. Example: `String`.
 ///
