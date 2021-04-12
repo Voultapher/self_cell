@@ -41,9 +41,21 @@ jobs:
       run: |
         cargo miri test --verbose --target x86_64-unknown-linux-gnu
         MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test --verbose --target x86_64-unknown-linux-gnu --test should_leak -- --ignored
+    - name: Run examples x86_64-unknown-linux-gnu
+      run: |
+        cd examples
+        cargo miri run --bin fallible_dependent_construction
+        cargo miri run --bin lazy_ast
+        cargo miri run --bin no_leak_panic
 
     - name: Run tests mips64-unknown-linux-gnuabi64
       run: |
         cargo miri test --verbose --target mips64-unknown-linux-gnuabi64
         MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test --verbose --target mips64-unknown-linux-gnuabi64 --test should_leak -- --ignored
+    - name: Run examples mips64-unknown-linux-gnuabi64
+      run: |
+        cd examples
+        cargo miri run --bin fallible_dependent_construction
+        cargo miri run --bin lazy_ast
+        cargo miri run --bin no_leak_panic
 

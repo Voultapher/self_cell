@@ -6,7 +6,7 @@
 //!
 //! In a nutshell, the API looks *roughly* like this:
 //!
-//! ```rust
+//! ```ignore
 //! // User code:
 //!
 //! self_cell!(NewStructName, {Debug}, from, Owner, Dependent, covariant);
@@ -41,7 +41,7 @@
 //!
 //! ### Fast compile times
 //!
-//! ```
+//! ```ignore
 //! $ rm -rf target && cargo +nightly build -Z timings
 //!
 //! Compiling self_cell v0.7.0
