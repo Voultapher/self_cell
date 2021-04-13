@@ -10,7 +10,15 @@ impl<'a> From<&'a String> for NotCovariant<'a> {
     }
 }
 
-self_cell!(NoCov, {}, from, String, NotCovariant, covariant);
+self_cell!(
+    struct NoCov {
+        #[from]
+        owner: String,
+
+        #[covariant]
+        dependent: NotCovariant,
+    }
+);
 
 fn main() {
     let _cell = NoCov::new("hi this is no good".into());

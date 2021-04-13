@@ -1,5 +1,7 @@
 // The unsafe being used gets tested with miri in the CI.
 
+#![deny(private_in_public)]
+
 use std::convert::TryInto;
 use std::fmt::Debug;
 
@@ -21,13 +23,16 @@ impl<'a> From<&'a String> for Ast<'a> {
 }
 
 self_cell!(
-    PackedAstCell,
-    {Clone, Debug, PartialEq, Eq, Hash},
-    from,
-    String,
-    Ast,
-    covariant,
-    doc(hidden)
+    #[doc(hidden)]
+    struct PackedAstCell {
+        #[from]
+        owner: String,
+
+        #[covariant]
+        dependent: Ast,
+    }
+
+    impl {Clone, Debug, PartialEq, Eq, Hash}
 );
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -137,7 +142,17 @@ fn failable_constructor_success() {
         }
     }
 
-    self_cell!(AstOk, { Debug }, try_from, Owner, Ast, covariant);
+    self_cell!(
+        struct AstOk {
+            #[try_from]
+            owner: Owner,
+
+            #[covariant]
+            dependent: Ast,
+        }
+
+        impl {Debug}
+    );
 
     let owner = Owner("This string is no trout".into());
     let expected_ast = Ast::from(&owner.0);
@@ -163,7 +178,17 @@ fn failable_constructor_fail() {
         }
     }
 
-    self_cell!(AstOk, { Debug }, try_from, Owner, Ast, covariant);
+    self_cell!(
+        struct AstOk {
+            #[try_from]
+            owner: Owner,
+
+            #[covariant]
+            dependent: Ast,
+        }
+
+        impl {Debug}
+    );
 
     let owner = Owner("This string is no trout".into());
 
@@ -200,7 +225,18 @@ fn catch_panic_in_from() {
         }
     }
 
-    self_cell!(NoLeakCell, { Debug }, try_from, Owner, PanicCtor, covariant);
+    self_cell!(
+        struct NoLeakCell {
+            #[try_from]
+            owner: Owner,
+
+            #[covariant]
+            dependent: PanicCtor,
+
+        }
+
+        impl {Debug}
+    );
 
     let owner = Owner("This string is no trout".into());
 
@@ -223,12 +259,15 @@ fn no_derive_owner_type() {
     }
 
     self_cell!(
-        NoDeriveCell,
-        { Debug },
-        from,
-        NoDerive,
-        Dependent,
-        covariant
+        struct NoDeriveCell {
+            #[from]
+            owner: NoDerive,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+
+        impl {Debug}
     );
     let no_derive = NoDeriveCell::new(NoDerive(22));
     assert_eq!(no_derive.borrow_dependent().0, &22);
@@ -249,7 +288,33 @@ impl<'a> From<&'a String> for NotSend<'a> {
     }
 }
 
-self_cell!(NotSendCell, {}, from, String, NotSend, covariant);
+#[test]
+fn public_cell() {
+    self_cell!(
+        pub struct PubCell {
+            #[from]
+            owner: String,
+
+            #[covariant]
+            dependent: Ast,
+        }
+
+        impl {} // empty impl
+    );
+
+    #[allow(dead_code)]
+    pub type PubTy = PubCell;
+}
+
+self_cell!(
+    struct NotSendCell {
+        #[from]
+        owner: String,
+
+        #[covariant]
+        dependent: NotSend,
+    }
+); // no impl
 
 #[test]
 fn not_send() {
@@ -294,7 +359,17 @@ fn custom_drop() {
         }
     }
 
-    self_cell!(CustomDrop, {Debug, PartialEq, Eq}, from, OV, OvRef, covariant);
+    self_cell!(
+        struct CustomDrop {
+            #[from]
+            owner: OV,
+
+            #[covariant]
+            dependent: OvRef,
+        }
+
+        impl {Debug, PartialEq, Eq}
+    );
 
     let cell = CustomDrop::new(None);
 
@@ -346,13 +421,16 @@ fn lazy_ast() {
     }
 
     self_cell!(
-        LazyAstCell,
-        {Clone, Debug, PartialEq, Eq, Hash},
-        from,
-        String,
-        LazyAst,
-        not_covariant,
-        doc(hidden)
+        #[doc(hidden)]
+        struct LazyAstCell {
+            #[from]
+            owner: String,
+
+            #[not_covariant]
+            dependent: LazyAst,
+        }
+
+        impl {Clone, Debug, PartialEq, Eq, Hash}
     );
 
     let body = String::from("How thou shall not see what trouts shall see");

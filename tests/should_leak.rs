@@ -13,7 +13,15 @@ fn panic_in_from_owner() {
         }
     }
 
-    self_cell!(PanicCell, {}, from, String, Dependent, covariant);
+    self_cell!(
+        struct PanicCell {
+            #[from]
+            owner: String,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+    );
 
     let result = std::panic::catch_unwind(|| {
         let _panic_cell = PanicCell::new("some longer string it is".into());

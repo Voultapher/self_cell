@@ -22,12 +22,15 @@ impl<'a> From<&'a String> for LazyAstCell<'a> {
 }
 
 self_cell!(
-    LazyAst,
-    {Clone, Debug, PartialEq, Eq, Hash},
-    from,
-    String,
-    LazyAstCell,
-    not_covariant // Because OnceCell uses UnsafeCell.
+    struct LazyAst {
+        #[from]
+        owner: String,
+
+        #[not_covariant] // Because OnceCell uses UnsafeCell.
+        dependent: LazyAstCell,
+    }
+
+    impl {Clone, Debug, PartialEq, Eq, Hash}
 );
 
 impl LazyAst {

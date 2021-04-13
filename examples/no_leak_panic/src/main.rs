@@ -23,7 +23,17 @@ impl<'a> TryInto<PanicCtor<'a>> for &'a Owner {
     }
 }
 
-self_cell!(NoLeakCell, { Debug }, try_from, Owner, PanicCtor, covariant);
+self_cell!(
+    struct NoLeakCell {
+        #[try_from]
+        owner: Owner,
+
+        #[covariant]
+        dependent: PanicCtor,
+    }
+
+    impl {Debug}
+);
 
 fn main() {
     let owner = Owner("This string is no trout".into());

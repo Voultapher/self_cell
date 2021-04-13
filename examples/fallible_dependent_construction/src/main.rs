@@ -39,7 +39,17 @@ impl<'a> TryFrom<&'a String> for Names<'a> {
     }
 }
 
-self_cell!(NameCell, { Debug }, try_from, String, Names, covariant);
+self_cell!(
+    struct NameCell {
+        #[try_from]
+        owner: String,
+
+        #[covariant]
+        dependent: Names,
+    }
+
+    impl {Debug}
+);
 
 fn main() {
     dbg!(NameCell::try_from("this is good".into()).unwrap());
