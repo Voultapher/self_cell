@@ -149,8 +149,8 @@ pub mod unsafe_self_cell;
 #[doc(hidden)]
 #[macro_export]
 macro_rules! _cell_constructor {
-    (from, $Owner:ty, $Dependent:ident) => {
-        fn new(owner: $Owner) -> Self {
+    (from, $Vis:vis, $Owner:ty, $Dependent:ident) => {
+        $Vis fn new(owner: $Owner) -> Self {
             unsafe {
                 // All this has to happen here, because there is not good way
                 // of passing the appropriate logic into UnsafeSelfCell::new
@@ -180,8 +180,8 @@ macro_rules! _cell_constructor {
             }
         }
     };
-    (try_from, $Owner:ty, $Dependent:ident) => {
-        fn try_from<'a>(
+    (try_from, $Vis:vis, $Owner:ty, $Dependent:ident) => {
+        $Vis fn try_from<'a>(
             owner: $Owner,
         ) -> Result<Self, <&'a $Owner as core::convert::TryInto<$Dependent<'a>>>::Error> {
             unsafe {
@@ -206,7 +206,7 @@ macro_rules! _cell_constructor {
                 // Attempt to initialize dependent with owner reference in final place.
                 let try_inplace_init = || -> Result<(), Error<'a>> {
                     core::ptr::addr_of_mut!((*joined_ptr).dependent)
-                        .write((&(*joined_ptr).owner).try_into()?);
+                        .write(core::convert::TryInto::try_into(&(*joined_ptr).owner)?);
 
                     Ok(())
                 };
@@ -229,7 +229,7 @@ macro_rules! _cell_constructor {
             }
         }
     };
-    ($x:ident, $Owner:ty, $Dependent:ident) => {
+    ($x:ident, $Vis:vis, $Owner:ty, $Dependent:ident) => {
         compile_error!("This macro only accepts `from` or `try_from`");
     };
 }
@@ -237,8 +237,8 @@ macro_rules! _cell_constructor {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! _covariant_access {
-    (covariant, $Dependent:ident) => {
-        fn borrow_dependent<'a>(&'a self) -> &'a $Dependent<'a> {
+    (covariant, $Vis:vis, $Dependent:ident) => {
+        $Vis fn borrow_dependent<'a>(&'a self) -> &'a $Dependent<'a> {
             fn _assert_covariance<'x: 'y, 'y>(x: $Dependent<'x>) -> $Dependent<'y> {
                 //  This function only compiles for covariant types.
                 x // Change the macro invocation to not_covariant.
@@ -247,13 +247,13 @@ macro_rules! _covariant_access {
             unsafe { self.unsafe_self_cell.borrow_dependent() }
         }
     };
-    (not_covariant, $Dependent:ident) => {
+    (not_covariant, $Vis:vis, $Dependent:ident) => {
         // For types that are not covariant it's unsafe to allow
         // returning direct references.
         // For example a lifetime that is too short could be chosen:
         // See https://github.com/Voultapher/self_cell/issues/5
     };
-    ($x:ident, $Dependent:ident) => {
+    ($x:ident, $Vis:vis, $Dependent:ident) => {
         compile_error!("This macro only accepts `covariant` or `not_covariant`");
     };
 }
@@ -446,13 +446,13 @@ macro_rules! self_cell {
         }
 
         impl $StructName {
-            $crate::_cell_constructor!($ConstructorType, $Owner, $Dependent);
+            $crate::_cell_constructor!($ConstructorType, $Vis, $Owner, $Dependent);
 
-            fn borrow_owner<'a>(&'a self) -> &'a $Owner {
+            $Vis fn borrow_owner<'a>(&'a self) -> &'a $Owner {
                 unsafe { self.unsafe_self_cell.borrow_owner::<$Dependent<'a>>() }
             }
 
-            fn with_dependent<Ret>(&self, func: impl for<'a> FnOnce(&'a $Owner, &'a $Dependent<'a>) -> Ret) -> Ret {
+            $Vis fn with_dependent<Ret>(&self, func: impl for<'a> FnOnce(&'a $Owner, &'a $Dependent<'a>) -> Ret) -> Ret {
                 unsafe {
                     func(
                         self.unsafe_self_cell.borrow_owner::<$Dependent>(),
@@ -461,7 +461,7 @@ macro_rules! self_cell {
                 }
             }
 
-            $crate::_covariant_access!($Covariance, $Dependent);
+            $crate::_covariant_access!($Covariance, $Vis, $Dependent);
         }
 
         impl Drop for $StructName {

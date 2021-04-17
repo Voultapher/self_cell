@@ -14,7 +14,7 @@ use once_cell::unsync::OnceCell;
 use self_cell::self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
-struct Ast<'input>(pub Vec<&'input str>);
+pub struct Ast<'input>(pub Vec<&'input str>);
 
 impl<'a> From<&'a String> for Ast<'a> {
     fn from(body: &'a String) -> Self {
@@ -167,32 +167,38 @@ fn failable_constructor_success() {
 
 #[test]
 fn failable_constructor_fail() {
-    #[derive(Debug, Clone, PartialEq)]
-    struct Owner(String);
+    mod no_try_into_import {
+        use super::Ast;
+        use self_cell::self_cell;
 
-    impl<'a> TryInto<Ast<'a>> for &'a Owner {
-        type Error = i32;
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Owner(pub String);
 
-        fn try_into(self) -> Result<Ast<'a>, Self::Error> {
-            Err(22)
+        impl<'a> std::convert::TryInto<Ast<'a>> for &'a Owner {
+            type Error = i32;
+
+            fn try_into(self) -> Result<Ast<'a>, Self::Error> {
+                Err(22)
+            }
         }
+
+        self_cell!(
+            pub struct AstOk {
+                #[try_from]
+                owner: Owner,
+
+                #[covariant]
+                dependent: Ast,
+            }
+
+            impl {Debug}
+        );
     }
 
-    self_cell!(
-        struct AstOk {
-            #[try_from]
-            owner: Owner,
+    let owner = no_try_into_import::Owner("This string is no trout".into());
 
-            #[covariant]
-            dependent: Ast,
-        }
-
-        impl {Debug}
-    );
-
-    let owner = Owner("This string is no trout".into());
-
-    let ast_cell_result: Result<AstOk, i32> = AstOk::try_from(owner.clone());
+    let ast_cell_result: Result<no_try_into_import::AstOk, i32> =
+        no_try_into_import::AstOk::try_from(owner.clone());
     assert!(ast_cell_result.is_err());
 
     let err = ast_cell_result.unwrap_err();
