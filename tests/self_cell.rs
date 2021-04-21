@@ -206,6 +206,46 @@ fn failable_constructor_fail() {
 }
 
 #[test]
+fn from_fn() {
+    #[derive(Debug)]
+    struct Dependent<'a>(&'a String);
+
+    self_cell!(
+        struct FnCell {
+            #[from_fn]
+            owner: String,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+
+        impl {Debug}
+    );
+
+    let mut extra_outside_state = None;
+
+    assert_eq!(extra_outside_state, None);
+
+    let expected_str = "small pink bike";
+
+    let fn_cell = FnCell::from_fn(expected_str.clone().into(), |owner| {
+        // Make sure it only gets called once.
+        extra_outside_state = if let Some(x) = extra_outside_state {
+            Some(x + 5)
+        } else {
+            Some(66)
+        };
+
+        Dependent(owner)
+    });
+
+    assert_eq!(extra_outside_state, Some(66));
+    assert_eq!(fn_cell.borrow_owner(), expected_str);
+    assert_eq!(fn_cell.borrow_dependent().0, expected_str);
+    assert_eq!(extra_outside_state, Some(66));
+}
+
+#[test]
 fn catch_panic_in_from() {
     // This pattern allows users to opt into not leaking memory on panic during
     // cell construction.

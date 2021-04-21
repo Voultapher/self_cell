@@ -170,7 +170,7 @@ macro_rules! _cell_constructor {
 
                 // Initialize dependent with owner reference in final place.
                 core::ptr::addr_of_mut!((*joined_ptr).dependent)
-                    .write((&(*joined_ptr).owner).into());
+                    .write(core::convert::Into::into((&(*joined_ptr).owner)));
 
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -229,8 +229,52 @@ macro_rules! _cell_constructor {
             }
         }
     };
+    (from_fn, $Vis:vis, $Owner:ty, $Dependent:ident) => {
+        $Vis fn from_fn(
+            owner: $Owner,
+            dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> $Dependent<'a>
+        ) -> Self {
+            unsafe {
+                // All this has to happen here, because there is not good way
+                // of passing the appropriate logic into UnsafeSelfCell::new
+                // short of assuming Dependent<'static> is the same as
+                // Dependent<'a>, which I'm not confident is safe.
+
+                // For this API to be safe there has to be no safe way to
+                // capture additional references in `dependent_builder` and then
+                // return them as part of Dependent. Eg. it should be impossible
+                // to express: 'a should outlive 'x here `fn
+                // bad<'a>(outside_ref: &'a String) -> impl for<'x> FnOnce(&'x
+                // Owner) -> Dependent<'x>`.
+
+                // Also because we don't want to store the FnOnce, using this
+                // ctor means Clone can't be automatically implemented.
+
+                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
+
+                let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+
+                let joined_void_ptr = $crate::alloc::alloc::alloc(layout);
+
+                let joined_ptr = core::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
+
+                // Move owner into newly allocated space.
+                core::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
+
+                // Initialize dependent with owner reference in final place.
+                core::ptr::addr_of_mut!((*joined_ptr).dependent)
+                    .write(dependent_builder((&(*joined_ptr).owner)));
+
+                Self {
+                    unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
+                        joined_void_ptr,
+                    ),
+                }
+            }
+        }
+    };
     ($x:ident, $Vis:vis, $Owner:ty, $Dependent:ident) => {
-        compile_error!("This macro only accepts `from` or `try_from`");
+        compile_error!("This macro only accepts `from`, `try_from` or `from_fn`");
     };
 }
 
@@ -264,6 +308,7 @@ macro_rules! _impl_automatic_derive {
     (Clone, $StructName:ident) => {
         impl Clone for $StructName {
             fn clone(&self) -> Self {
+                // TODO support try_from.
                 Self::new(self.borrow_owner().clone())
             }
         }
@@ -362,6 +407,14 @@ macro_rules! _impl_automatic_derive {
 ///     constructor, which allows fallible construction without having to check
 ///     for failure every time dependent is accessed. For this to work `<&'a
 ///     $Owner>::TryInto<$Dependent<'a>>` has to be implemented.
+///
+///   * **from_fn**: This generates a `fn from_fn(owner: $Owner,
+///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> $Dependent<'a>) ->
+///     Self` constructor, which allows more flexible construction that can also
+///     return additional unrelated state. But has the drawback of preventing
+///     Clone from being automatically implemented. A Fn or FnMut would have to
+///     be stored to enable this. However you can still implement Clone
+///     yourself.
 ///
 ///   NOTE: If `<&'a $Owner>::Into<$Dependent<'a>>` panics, the value of owner
 ///   and a heap struct will be leaked. This is safe, but might not be what you
