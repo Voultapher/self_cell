@@ -132,11 +132,11 @@
 //! See the documentation for [`self_cell`] to dive further into the details.
 //!
 //! Or take a look at the advanced examples:
-//! - [Example how to handle dependent construction that can fail](https://github.com/Voultapher/once_self_cell/tree/main/examples/fallible_dependent_construction)
+//! - [Example how to handle dependent construction that can fail](https://github.com/Voultapher/self_cell/tree/main/examples/fallible_dependent_construction)
 //!
-//! - [How to build a lazy AST with self_cell](https://github.com/Voultapher/once_self_cell/tree/main/examples/lazy_ast)
+//! - [How to build a lazy AST with self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
 //!
-//! - [How to avoid leaking memory if `Dependen::from(&Owner)` panics](https://github.com/Voultapher/once_self_cell/tree/main/examples/no_leak_panic)
+//! - [How to avoid leaking memory if `Dependen::from(&Owner)` panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic)
 
 #![no_std]
 
@@ -419,7 +419,7 @@ macro_rules! _impl_automatic_derive {
 ///   NOTE: If `<&'a $Owner>::Into<$Dependent<'a>>` panics, the value of owner
 ///   and a heap struct will be leaked. This is safe, but might not be what you
 ///   want. See [How to avoid leaking memory if `Dependen::from(&Owner)`
-///   panics](https://github.com/Voultapher/once_self_cell/tree/main/examples/no_leak_panic).
+///   panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic).
 ///
 /// - `$Owner:ty` Type of owner. This has to have a `'static` lifetime. Example:
 ///   `String`.
@@ -446,7 +446,7 @@ macro_rules! _impl_automatic_derive {
 ///   * **not_covariant**: This generates no additional code but you can use `fn
 ///     with_dependent<Ret>(&self, func: impl for<'a> FnOnce(&'a $Owner, &'a
 ///     $Dependent<'a>) -> Ret) -> Ret`. See [How to build a lazy AST with
-///     self_cell](https://github.com/Voultapher/once_self_cell/tree/main/examples/lazy_ast)
+///     self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
 ///     for a usage example.
 ///
 /// - `impl {$($AutomaticDerive:ident),*},` Optional comma separated list of
