@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "fallible_dependent_construction",
+    "lazy_ast",
+    "no_leak_panic",
+]

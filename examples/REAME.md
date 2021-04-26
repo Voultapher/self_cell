@@ -1,0 +1,9 @@
+# `self_cell` Examples
+
+The advanced examples:
+
+- [How to handle dependent construction that can fail](fallible_dependent_construction)
+
+- [How to build a lazy AST with self_cell](lazy_ast)
+
+- [How to avoid leaking memory if Dependen::from(&Owner) panics](no_leak_panic_from)

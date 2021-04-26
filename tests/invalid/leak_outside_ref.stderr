@@ -1,0 +1,14 @@
+error[E0597]: `outside_string` does not live long enough
+  --> $DIR/leak_outside_ref.rs:23:15
+   |
+21 |       let _cell = NoCov::from_fn("hi this is no good".into(), |owner| Dependent {
+   |  _____________________________________________________________-------_-
+   | |                                                             |
+   | |                                                             value captured here
+22 | |         good: owner,
+23 | |         bad: &outside_string,
+   | |               ^^^^^^^^^^^^^^ borrowed value does not live long enough
+24 | |     });
+   | |_____- returning this value requires that `outside_string` is borrowed for `'static`
+25 |   }
+   |   - `outside_string` dropped here while still borrowed
