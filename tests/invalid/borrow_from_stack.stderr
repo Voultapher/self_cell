@@ -1,0 +1,8 @@
+error[E0515]: cannot return value referencing local variable `stack_string`
+ --> $DIR/borrow_from_stack.rs:9:9
+  |
+9 |         Self(&stack_string)
+  |         ^^^^^-------------^
+  |         |    |
+  |         |    `stack_string` is borrowed here
+  |         returns a value referencing data owned by the current function
