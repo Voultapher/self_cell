@@ -1,6 +1,6 @@
-use core::marker::PhantomData;
-use core::mem::transmute;
-use core::ptr::drop_in_place;
+use std::marker::PhantomData;
+use std::mem::transmute;
+use std::ptr::drop_in_place;
 
 extern crate alloc;
 
@@ -42,62 +42,7 @@ impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
     pub unsafe fn new(
         joined_void_ptr: *mut u8,
         // init_dependent: for<'a> fn(&'a Owner, *mut Dependent),
-    ) -> Self
-// where
-        // Owner
-        // for<'a> Dependent: From<&'a Owner> + core::fmt::Debug,
-    {
-        // let layout = Layout::from_size_align_unchecked(
-        //     size_of::<JoinedCell<Owner, DependentStatic>>(),
-        //     align_of::<JoinedCell<Owner, DependentStatic>>(),
-        // );
-
-        // let joined_void_ptr = alloc(layout);
-
-        // let joined_ptr =
-        //     transmute::<*mut u8, *mut JoinedCell<Owner, DependentStatic>>(joined_void_ptr);
-
-        // // Move owner into newly allocated space.
-        // addr_of_mut!((*joined_ptr).owner).write(owner);
-
-        // // Initialize dependent with owner reference in final place.
-        // // init_dependent(&(*joined_ptr).owner, addr_of_mut!((*joined_ptr).dependent));
-        // // init_dependent(&(*joined_ptr).owner);
-        // // addr_of_mut!((*joined_ptr).dependent).write((&(*joined_ptr).owner).into());
-
-        // // // #[repr(C)]
-        // // struct JoinedCellMaybeUninit<Owner, Dependent> {
-        // //     owner: Owner,
-        // //     dependent: MaybeUninit<Dependent>,
-        // // }
-
-        // // // We move owner to the heap final location.
-        // // // Then use that value to inplace init the dependent.
-        // // let mut joined_box_raw = Box::new(JoinedCellMaybeUninit::<Owner, Dependent> {
-        // //     owner,
-        // //     dependent: MaybeUninit::uninit().assume_init(),
-        // // });
-
-        // // // We know the heap allocated owner will outlive this function,
-        // // // so this transmute is safe.
-        // // let owner_ref: &'a Owner = transmute::<_, &'a Owner>(&joined_box_raw.owner);
-
-        // // dbg!(owner_ref);
-
-        // // joined_box_raw
-        // //     .dependent
-        // //     .as_mut_ptr()
-        // //     .write(owner_ref.into());
-
-        // // // Type erase pointer to store inside struct.
-        // // let joined_void_ptr = transmute::<*mut JoinedCellMaybeUninit<Owner, Dependent>, *mut u8>(
-        // //     Box::into_raw(joined_box_raw),
-        // // );
-
-        // // let joined_ptr = transmute::<*mut u8, *mut JoinedCell<Owner, Dependent>>(joined_void_ptr);
-
-        // // dbg!(&(*joined_ptr).dependent);
-
+    ) -> Self {
         Self {
             joined_void_ptr,
             owner_marker: PhantomData,

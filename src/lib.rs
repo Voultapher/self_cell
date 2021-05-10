@@ -138,11 +138,6 @@
 //!
 //! - [How to avoid leaking memory if `Dependen::from(&Owner)` panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic)
 
-#![no_std]
-
-#[doc(hidden)]
-pub extern crate alloc;
-
 #[doc(hidden)]
 pub mod unsafe_self_cell;
 
@@ -159,18 +154,18 @@ macro_rules! _cell_constructor {
 
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
-                let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+                let layout = std::alloc::Layout::new::<JoinedCell>();
 
-                let joined_void_ptr = $crate::alloc::alloc::alloc(layout);
+                let joined_void_ptr = std::alloc::alloc(layout);
 
-                let joined_ptr = core::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
+                let joined_ptr = std::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
 
                 // Move owner into newly allocated space.
-                core::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
+                std::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
 
                 // Initialize dependent with owner reference in final place.
-                core::ptr::addr_of_mut!((*joined_ptr).dependent)
-                    .write(core::convert::Into::into((&(*joined_ptr).owner)));
+                std::ptr::addr_of_mut!((*joined_ptr).dependent)
+                    .write(std::convert::Into::into((&(*joined_ptr).owner)));
 
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -183,7 +178,7 @@ macro_rules! _cell_constructor {
     (try_from, $Vis:vis, $Owner:ty, $Dependent:ident) => {
         $Vis fn try_from<'a>(
             owner: $Owner,
-        ) -> Result<Self, <&'a $Owner as core::convert::TryInto<$Dependent<'a>>>::Error> {
+        ) -> Result<Self, <&'a $Owner as std::convert::TryInto<$Dependent<'a>>>::Error> {
             unsafe {
                 // All this has to happen here, because there is not good way
                 // of passing the appropriate logic into UnsafeSelfCell::new
@@ -192,21 +187,21 @@ macro_rules! _cell_constructor {
 
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
-                let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+                let layout = std::alloc::Layout::new::<JoinedCell>();
 
-                let joined_void_ptr = $crate::alloc::alloc::alloc(layout);
+                let joined_void_ptr = std::alloc::alloc(layout);
 
-                let joined_ptr = core::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
+                let joined_ptr = std::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
 
                 // Move owner into newly allocated space.
-                core::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
+                std::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
 
-                type Error<'a> = <&'a $Owner as core::convert::TryInto<$Dependent<'a>>>::Error;
+                type Error<'a> = <&'a $Owner as std::convert::TryInto<$Dependent<'a>>>::Error;
 
                 // Attempt to initialize dependent with owner reference in final place.
                 let try_inplace_init = || -> Result<(), Error<'a>> {
-                    core::ptr::addr_of_mut!((*joined_ptr).dependent)
-                        .write(core::convert::TryInto::try_into(&(*joined_ptr).owner)?);
+                    std::ptr::addr_of_mut!((*joined_ptr).dependent)
+                        .write(std::convert::TryInto::try_into(&(*joined_ptr).owner)?);
 
                     Ok(())
                 };
@@ -219,9 +214,9 @@ macro_rules! _cell_constructor {
                     }),
                     Err(err) => {
                         // Clean up partially initialized joined_cell.
-                        core::ptr::drop_in_place(core::ptr::addr_of_mut!((*joined_ptr).owner));
+                        std::ptr::drop_in_place(std::ptr::addr_of_mut!((*joined_ptr).owner));
 
-                        $crate::alloc::alloc::dealloc(joined_void_ptr, layout);
+                        std::alloc::dealloc(joined_void_ptr, layout);
 
                         Err(err)
                     }
@@ -252,17 +247,17 @@ macro_rules! _cell_constructor {
 
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
-                let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+                let layout = std::alloc::Layout::new::<JoinedCell>();
 
-                let joined_void_ptr = $crate::alloc::alloc::alloc(layout);
+                let joined_void_ptr = std::alloc::alloc(layout);
 
-                let joined_ptr = core::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
+                let joined_ptr = std::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
 
                 // Move owner into newly allocated space.
-                core::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
+                std::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
 
                 // Initialize dependent with owner reference in final place.
-                core::ptr::addr_of_mut!((*joined_ptr).dependent)
+                std::ptr::addr_of_mut!((*joined_ptr).dependent)
                     .write(dependent_builder((&(*joined_ptr).owner)));
 
                 Self {
@@ -314,8 +309,8 @@ macro_rules! _impl_automatic_derive {
         }
     };
     (Debug, $StructName:ident) => {
-        impl core::fmt::Debug for $StructName {
-            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        impl std::fmt::Debug for $StructName {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 self.with_dependent(|owner, dependent| {
                     write!(
                         fmt,
@@ -341,8 +336,8 @@ macro_rules! _impl_automatic_derive {
         impl Eq for $StructName {}
     };
     (Hash, $StructName:ident) => {
-        impl core::hash::Hash for $StructName {
-            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        impl std::hash::Hash for $StructName {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
                 self.borrow_owner().hash(state);
             }
         }
