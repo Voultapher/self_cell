@@ -449,6 +449,12 @@ macro_rules! _impl_automatic_derive {
 ///     self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
 ///     for a usage example.
 ///
+///   In both cases you can use the `fn with_dependent_mut<Ret>(&mut self, func:
+///   impl for<'a> FnOnce(&'a $Owner, &'a mut $Dependent<'a>) -> Ret) -> Ret`
+///   function to mutate the dependent value. This is safe to do because
+///   notionally you are replacing pointers to a value not the other way around.
+///
+///
 /// - `impl {$($AutomaticDerive:ident),*},` Optional comma separated list of
 ///   optional automatic trait implementations. Possible Values:
 ///   * **Clone**: Logic `cloned_owner = owner.clone()` and then calls
@@ -512,6 +518,14 @@ macro_rules! self_cell {
                         self.unsafe_self_cell.borrow_dependent()
                     )
                 }
+            }
+
+            $Vis fn with_dependent_mut<Ret>(&mut self, func: impl for<'a> FnOnce(&'a $Owner, &'a mut $Dependent<'a>) -> Ret) -> Ret {
+                let joined_cell = unsafe {
+                     self.unsafe_self_cell.borrow_mut()
+                };
+
+                func(&joined_cell.owner, &mut joined_cell.dependent)
             }
 
             $crate::_covariant_access!($Covariance, $Vis, $Dependent);

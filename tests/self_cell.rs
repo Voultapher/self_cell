@@ -425,6 +425,36 @@ fn custom_drop() {
 }
 
 #[test]
+fn dependent_mutate() {
+    let mut ast_cell = PackedAstCell::new("Egal in welchen Farben ihr den ..".into());
+
+    assert_eq!(ast_cell.borrow_dependent().0.len(), 2);
+
+    ast_cell.with_dependent_mut(|_, ast| {
+        ast.0.clear();
+    });
+
+    assert_eq!(ast_cell.borrow_dependent().0.len(), 0);
+}
+
+#[test]
+fn dependent_replace() {
+    let before_input = String::from("Egal in welchen Farben ihr den ..");
+    let before_ast_expected = Ast::from(&before_input);
+
+    let mut ast_cell = PackedAstCell::new(before_input.clone());
+
+    assert_eq!(ast_cell.borrow_owner(), &before_input);
+    assert_eq!(ast_cell.borrow_dependent(), &before_ast_expected);
+
+    ast_cell.with_dependent_mut(|owner, ast| {
+        *ast = Ast(vec![&owner[0..2], &owner[0..3], &owner[5..9]]);
+    });
+
+    assert_eq!(ast_cell.borrow_dependent().0, vec!["Eg", "Ega", "in w"]);
+}
+
+#[test]
 fn share_across_threads() {
     // drop_joined takes &mut self, so that's not a thread concern anyway.
     // And get_or_init_dependent should be as thread compatible as OnceCell.
