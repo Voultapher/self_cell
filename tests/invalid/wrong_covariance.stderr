@@ -12,7 +12,7 @@ error[E0308]: mismatched types
    |
    = note: expected struct `NotCovariant<'y>`
               found struct `NotCovariant<'x>`
-note: the lifetime `'y` as defined on the function body at 286:43...
+note: the lifetime `'y` as defined on the function body at 336:43...
   --> $DIR/wrong_covariance.rs:13:1
    |
 13 | / self_cell!(
@@ -23,7 +23,7 @@ note: the lifetime `'y` as defined on the function body at 286:43...
 20 | |     }
 21 | | );
    | |__^
-note: ...does not necessarily outlive the lifetime `'x` as defined on the function body at 286:35
+note: ...does not necessarily outlive the lifetime `'x` as defined on the function body at 336:35
   --> $DIR/wrong_covariance.rs:13:1
    |
 13 | / self_cell!(

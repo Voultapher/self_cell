@@ -273,8 +273,58 @@ macro_rules! _cell_constructor {
             }
         }
     };
+    (try_from_fn, $Vis:vis, $Owner:ty, $Dependent:ident) => {
+        $Vis fn try_from_fn<Err>(
+            owner: $Owner,
+            dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+        ) -> Result<Self, Err> {
+            unsafe {
+                // All this has to happen here, because there is not good way
+                // of passing the appropriate logic into UnsafeSelfCell::new
+                // short of assuming Dependent<'static> is the same as
+                // Dependent<'a>, which I'm not confident is safe.
+
+                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
+
+                let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+
+                let joined_void_ptr = $crate::alloc::alloc::alloc(layout);
+
+                let joined_ptr = core::mem::transmute::<*mut u8, *mut JoinedCell>(joined_void_ptr);
+
+                // Move owner into newly allocated space.
+                core::ptr::addr_of_mut!((*joined_ptr).owner).write(owner);
+
+                type Error<'a> = <&'a $Owner as core::convert::TryInto<$Dependent<'a>>>::Error;
+
+                // Attempt to initialize dependent with owner reference in final place.
+                let try_inplace_init = || -> Result<(), Err> {
+                    core::ptr::addr_of_mut!((*joined_ptr).dependent)
+                        .write(dependent_builder(&(*joined_ptr).owner)?);
+
+                    Ok(())
+                };
+
+                match try_inplace_init() {
+                    Ok(()) => Ok(Self {
+                        unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
+                            joined_void_ptr,
+                        ),
+                    }),
+                    Err(err) => {
+                        // Clean up partially initialized joined_cell.
+                        core::ptr::drop_in_place(core::ptr::addr_of_mut!((*joined_ptr).owner));
+
+                        $crate::alloc::alloc::dealloc(joined_void_ptr, layout);
+
+                        Err(err)
+                    }
+                }
+            }
+        }
+    };
     ($x:ident, $Vis:vis, $Owner:ty, $Dependent:ident) => {
-        compile_error!("This macro only accepts `from`, `try_from` or `from_fn`");
+        compile_error!("This macro only accepts `from`, `try_from`, `from_fn` or `try_from_fn`");
     };
 }
 
@@ -412,13 +462,21 @@ macro_rules! _impl_automatic_derive {
 ///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> $Dependent<'a>) ->
 ///     Self` constructor, which allows more flexible construction that can also
 ///     return additional unrelated state. But has the drawback of preventing
-///     Clone from being automatically implemented. A Fn or FnMut would have to
+///     Clone from being automatically implemented. A Fn object would have to
 ///     be stored to enable this. However you can still implement Clone
 ///     yourself.
 ///
+///   * **try_from_fn**: This generates a `fn try_from_fn<Err>(owner: $Owner,
+///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) ->
+///     Result<$Dependent<'a>, Err>) -> Result<Self, Err>` constructor, which
+///     allows more flexible fallible construction that can also return
+///     additional unrelated state. But has the drawback of preventing Clone
+///     from being automatically implemented. A Fn object would have to be
+///     stored to enable this. However you can still implement Clone yourself.
+///
 ///   NOTE: If `<&'a $Owner>::Into<$Dependent<'a>>` panics, the value of owner
 ///   and a heap struct will be leaked. This is safe, but might not be what you
-///   want. See [How to avoid leaking memory if `Dependen::from(&Owner)`
+///   want. See [How to avoid leaking memory if `Dependent::from(&Owner)`
 ///   panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic).
 ///
 /// - `$Owner:ty` Type of owner. This has to have a `'static` lifetime. Example:

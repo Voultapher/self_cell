@@ -206,6 +206,57 @@ fn failable_constructor_fail() {
 }
 
 #[test]
+fn failable_constructor_fn_success() {
+    self_cell!(
+        struct AstOk {
+            #[try_from_fn]
+            owner: String,
+
+            #[covariant]
+            dependent: Ast,
+        }
+
+        impl {Debug}
+    );
+
+    let owner = String::from("This string is no trout");
+    let expected_ast = Ast::from(&owner);
+
+    let ast_cell_result: Result<AstOk, i32> =
+        AstOk::try_from_fn(owner.clone(), |owner| Ok(Ast::from(owner)));
+
+    assert!(ast_cell_result.is_ok());
+
+    let ast_cell = ast_cell_result.unwrap();
+    assert_eq!(ast_cell.borrow_owner(), &owner);
+    assert_eq!(ast_cell.borrow_dependent(), &expected_ast);
+}
+
+#[test]
+fn failable_constructor_fn_fail() {
+    self_cell!(
+        struct AstOk {
+            #[try_from_fn]
+            owner: String,
+
+            #[covariant]
+            dependent: Ast,
+        }
+
+        impl {Debug}
+    );
+
+    let owner = String::from("This string is no trout");
+
+    let ast_cell_result: Result<AstOk, i32> = AstOk::try_from_fn(owner.clone(), |_owner| Err(22));
+
+    assert!(ast_cell_result.is_err());
+
+    let err = ast_cell_result.unwrap_err();
+    assert_eq!(err, 22);
+}
+
+#[test]
 fn from_fn() {
     #[derive(Debug)]
     struct Dependent<'a>(&'a String);
