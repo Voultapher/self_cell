@@ -136,7 +136,7 @@
 //!
 //! - [How to build a lazy AST with self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
 //!
-//! - [How to avoid leaking memory if `Dependen::from(&Owner)` panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic)
+//! - [How to avoid leaking memory if `Dependent::from(&Owner)` panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic)
 
 #![no_std]
 
