@@ -584,6 +584,14 @@ fn lazy_ast() {
 }
 
 #[test]
+fn cell_mem_size() {
+    use std::mem::size_of;
+
+    assert_eq!(size_of::<PackedAstCell>(), size_of::<*const u8>());
+    assert_eq!(size_of::<Option<PackedAstCell>>(), size_of::<*const u8>());
+}
+
+#[test]
 // Not supported by miri isolation.
 #[cfg_attr(miri, ignore)]
 // Closure paths slashes show up as diff error on Windows.

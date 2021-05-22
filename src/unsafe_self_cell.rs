@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 use core::mem::transmute;
-use core::ptr::drop_in_place;
+use core::ptr::{drop_in_place, NonNull};
 
 extern crate alloc;
 
@@ -28,10 +28,7 @@ pub struct JoinedCell<Owner, Dependent> {
 // Because the macro generated struct impl can be extended, could be unsafe.
 #[doc(hidden)]
 pub struct UnsafeSelfCell<Owner: 'static, DependentStatic: 'static> {
-    // It's crucial these members are private.
-    // *mut even though *const might be enough to mark this type itself
-    // as invariant(covariance).
-    joined_void_ptr: *mut u8,
+    joined_void_ptr: NonNull<u8>,
 
     owner_marker: PhantomData<Owner>,
     // DependentStatic is only used to correctly derive Send and Sync.
@@ -39,7 +36,7 @@ pub struct UnsafeSelfCell<Owner: 'static, DependentStatic: 'static> {
 }
 
 impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
-    pub unsafe fn new(joined_void_ptr: *mut u8) -> Self {
+    pub unsafe fn new(joined_void_ptr: NonNull<u8>) -> Self {
         Self {
             joined_void_ptr,
             owner_marker: PhantomData,
@@ -49,35 +46,35 @@ impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
 
     pub unsafe fn borrow_owner<'a, Dependent>(&'a self) -> &'a Owner {
         let joined_ptr =
-            transmute::<*mut u8, *mut JoinedCell<Owner, Dependent>>(self.joined_void_ptr);
+            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        &(*joined_ptr).owner
+        &(*joined_ptr.as_ptr()).owner
     }
 
     pub unsafe fn borrow_dependent<'a, Dependent>(&'a self) -> &'a Dependent {
         let joined_ptr =
-            transmute::<*mut u8, *mut JoinedCell<Owner, Dependent>>(self.joined_void_ptr);
+            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        &(*joined_ptr).dependent
+        &(*joined_ptr.as_ptr()).dependent
     }
 
     pub unsafe fn borrow_mut<'a, Dependent>(&'a mut self) -> &'a mut JoinedCell<Owner, Dependent> {
         let joined_ptr =
-            transmute::<*mut u8, *mut JoinedCell<Owner, Dependent>>(self.joined_void_ptr);
+            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        &mut (*joined_ptr)
+        &mut (*joined_ptr.as_ptr())
     }
 
     // Any subsequent use of this struct other than dropping it is UB.
     pub unsafe fn drop_joined<Dependent>(&mut self) {
         let joined_ptr =
-            transmute::<*mut u8, *mut JoinedCell<Owner, Dependent>>(self.joined_void_ptr);
+            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        drop_in_place(joined_ptr);
+        drop_in_place(joined_ptr.as_ptr());
 
         let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
 
-        dealloc(self.joined_void_ptr, layout);
+        dealloc(self.joined_void_ptr.as_ptr(), layout);
     }
 }
 
