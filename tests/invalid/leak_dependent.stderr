@@ -1,8 +1,8 @@
 error: lifetime may not live long enough
-  --> $DIR/leak_dependent.rs:25:58
+  --> $DIR/leak_dependent.rs:18:58
    |
-25 |     let _leaked_ref = cell.with_dependent(|_, dependent| dependent);
+18 |     let _leaked_ref = cell.with_dependent(|_, dependent| dependent);
    |                                            -           - ^^^^^^^^^ returning this value requires that `'1` must outlive `'2`
    |                                            |           |
-   |                                            |           return type of closure is &NotCovariant<'2>
+   |                                            |           return type of closure is &Cell<&'2 String>
    |                                            has type `&'1 String`

@@ -30,18 +30,8 @@ impl<'a> TryFrom<&'a str> for Name<'a> {
 #[derive(Debug)]
 struct Names<'a>(Vec<Name<'a>>);
 
-impl<'a> TryFrom<&'a String> for Names<'a> {
-    type Error = NameParseError;
-
-    fn try_from(s: &'a String) -> Result<Self, Self::Error> {
-        let res: Result<Vec<_>, _> = s.split(" ").map(Name::try_from).collect();
-        Ok(Self(res?))
-    }
-}
-
 self_cell!(
     struct NameCell {
-        #[try_from]
         owner: String,
 
         #[covariant]
@@ -51,7 +41,18 @@ self_cell!(
     impl {Debug}
 );
 
+fn names_from_str<'a>(s: &'a String) -> Result<Names, NameParseError> {
+    let res: Result<Vec<_>, _> = s.split(" ").map(Name::try_from).collect();
+    Ok(Names(res?))
+}
+
+fn process_input(input: String) {
+    let names: Result<_, NameParseError> = NameCell::try_new(input.clone(), names_from_str);
+
+    println!("'{}' -> {:?}", input, names);
+}
+
 fn main() {
-    dbg!(NameCell::try_from("this is good".into()).unwrap());
-    dbg!(NameCell::try_from("this is bad".into()).unwrap_err());
+    process_input("this is good".into());
+    process_input("this is bad".into());
 }

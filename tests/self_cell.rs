@@ -2,7 +2,6 @@
 
 #![deny(private_in_public)]
 
-use std::convert::TryInto;
 use std::fmt::Debug;
 
 use crossbeam_utils::thread;
@@ -16,8 +15,8 @@ use self_cell::self_cell;
 #[derive(Debug, Eq, PartialEq)]
 pub struct Ast<'input>(pub Vec<&'input str>);
 
-impl<'a> From<&'a String> for Ast<'a> {
-    fn from(body: &'a String) -> Self {
+impl<'x> From<&'x String> for Ast<'x> {
+    fn from<'a>(body: &'a String) -> Ast<'a> {
         Ast(vec![&body[2..5], &body[1..3]])
     }
 }
@@ -25,15 +24,20 @@ impl<'a> From<&'a String> for Ast<'a> {
 self_cell!(
     #[doc(hidden)]
     struct PackedAstCell {
-        #[from]
         owner: String,
 
         #[covariant]
         dependent: Ast,
     }
 
-    impl {Clone, Debug, PartialEq, Eq, Hash}
+    impl {Debug, PartialEq, Eq, Hash}
 );
+
+impl Clone for PackedAstCell {
+    fn clone(&self) -> Self {
+        PackedAstCell::new(self.borrow_owner().clone(), |owner| owner.into())
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct PackedAst {
@@ -43,7 +47,7 @@ struct PackedAst {
 impl PackedAst {
     fn new(body: String) -> Self {
         Self {
-            ast_cell: PackedAstCell::new(body),
+            ast_cell: PackedAstCell::new(body, |owner| owner.into()),
         }
     }
 
@@ -131,33 +135,12 @@ fn return_self_ref_struct() {
 
 #[test]
 fn failable_constructor_success() {
-    #[derive(Debug, Clone, PartialEq)]
-    struct Owner(String);
+    let owner = String::from("This string is no trout");
+    let expected_ast = Ast::from(&owner);
 
-    impl<'a> TryInto<Ast<'a>> for &'a Owner {
-        type Error = i32;
+    let ast_cell_result: Result<PackedAstCell, i32> =
+        PackedAstCell::try_new(owner.clone(), |owner| Ok(Ast::from(owner)));
 
-        fn try_into(self) -> Result<Ast<'a>, Self::Error> {
-            Ok(Ast::from(&self.0))
-        }
-    }
-
-    self_cell!(
-        struct AstOk {
-            #[try_from]
-            owner: Owner,
-
-            #[covariant]
-            dependent: Ast,
-        }
-
-        impl {Debug}
-    );
-
-    let owner = Owner("This string is no trout".into());
-    let expected_ast = Ast::from(&owner.0);
-
-    let ast_cell_result: Result<AstOk, i32> = AstOk::try_from(owner.clone());
     assert!(ast_cell_result.is_ok());
 
     let ast_cell = ast_cell_result.unwrap();
@@ -167,88 +150,10 @@ fn failable_constructor_success() {
 
 #[test]
 fn failable_constructor_fail() {
-    mod no_try_into_import {
-        use super::Ast;
-        use self_cell::self_cell;
-
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct Owner(pub String);
-
-        impl<'a> std::convert::TryInto<Ast<'a>> for &'a Owner {
-            type Error = i32;
-
-            fn try_into(self) -> Result<Ast<'a>, Self::Error> {
-                Err(22)
-            }
-        }
-
-        self_cell!(
-            pub struct AstOk {
-                #[try_from]
-                owner: Owner,
-
-                #[covariant]
-                dependent: Ast,
-            }
-
-            impl {Debug}
-        );
-    }
-
-    let owner = no_try_into_import::Owner("This string is no trout".into());
-
-    let ast_cell_result: Result<no_try_into_import::AstOk, i32> =
-        no_try_into_import::AstOk::try_from(owner.clone());
-    assert!(ast_cell_result.is_err());
-
-    let err = ast_cell_result.unwrap_err();
-    assert_eq!(err, 22);
-}
-
-#[test]
-fn failable_constructor_fn_success() {
-    self_cell!(
-        struct AstOk {
-            #[try_from_fn]
-            owner: String,
-
-            #[covariant]
-            dependent: Ast,
-        }
-
-        impl {Debug}
-    );
-
-    let owner = String::from("This string is no trout");
-    let expected_ast = Ast::from(&owner);
-
-    let ast_cell_result: Result<AstOk, i32> =
-        AstOk::try_from_fn(owner.clone(), |owner| Ok(Ast::from(owner)));
-
-    assert!(ast_cell_result.is_ok());
-
-    let ast_cell = ast_cell_result.unwrap();
-    assert_eq!(ast_cell.borrow_owner(), &owner);
-    assert_eq!(ast_cell.borrow_dependent(), &expected_ast);
-}
-
-#[test]
-fn failable_constructor_fn_fail() {
-    self_cell!(
-        struct AstOk {
-            #[try_from_fn]
-            owner: String,
-
-            #[covariant]
-            dependent: Ast,
-        }
-
-        impl {Debug}
-    );
-
     let owner = String::from("This string is no trout");
 
-    let ast_cell_result: Result<AstOk, i32> = AstOk::try_from_fn(owner.clone(), |_owner| Err(22));
+    let ast_cell_result: Result<PackedAstCell, i32> =
+        PackedAstCell::try_new(owner.clone(), |_owner| Err(22));
 
     assert!(ast_cell_result.is_err());
 
@@ -263,7 +168,6 @@ fn from_fn() {
 
     self_cell!(
         struct FnCell {
-            #[from_fn]
             owner: String,
 
             #[covariant]
@@ -279,7 +183,7 @@ fn from_fn() {
 
     let expected_str = "small pink bike";
 
-    let fn_cell = FnCell::from_fn(expected_str.clone().into(), |owner| {
+    let fn_cell = FnCell::new(expected_str.clone().into(), |owner| {
         // Make sure it only gets called once.
         extra_outside_state = if let Some(x) = extra_outside_state {
             Some(x + 5)
@@ -314,17 +218,16 @@ fn catch_panic_in_from() {
         }
     }
 
-    impl<'a> TryInto<PanicCtor<'a>> for &'a Owner {
-        type Error = Box<dyn std::any::Any + Send + 'static>;
+    // impl<'a> TryInto<PanicCtor<'a>> for &'a Owner {
+    //     type Error = Box<dyn std::any::Any + Send + 'static>;
 
-        fn try_into(self) -> Result<PanicCtor<'a>, Self::Error> {
-            std::panic::catch_unwind(|| PanicCtor::new(&self))
-        }
-    }
+    //     fn try_into(self) -> Result<PanicCtor<'a>, Self::Error> {
+    //         std::panic::catch_unwind(|| PanicCtor::new(&self))
+    //     }
+    // }
 
     self_cell!(
         struct NoLeakCell {
-            #[try_from]
             owner: Owner,
 
             #[covariant]
@@ -337,7 +240,9 @@ fn catch_panic_in_from() {
 
     let owner = Owner("This string is no trout".into());
 
-    let ast_cell_result = NoLeakCell::try_from(owner.clone());
+    let ast_cell_result = NoLeakCell::try_new(owner.clone(), |owner| {
+        std::panic::catch_unwind(|| PanicCtor::new(&owner))
+    });
     assert!(ast_cell_result.is_err());
 }
 
@@ -349,15 +254,8 @@ fn no_derive_owner_type() {
     #[derive(Debug)]
     struct Dependent<'a>(&'a i32);
 
-    impl<'a> From<&'a NoDerive> for Dependent<'a> {
-        fn from(d: &'a NoDerive) -> Self {
-            Self(&d.0)
-        }
-    }
-
     self_cell!(
         struct NoDeriveCell {
-            #[from]
             owner: NoDerive,
 
             #[covariant]
@@ -366,7 +264,7 @@ fn no_derive_owner_type() {
 
         impl {Debug}
     );
-    let no_derive = NoDeriveCell::new(NoDerive(22));
+    let no_derive = NoDeriveCell::new(NoDerive(22), |owner| Dependent(&owner.0));
     assert_eq!(no_derive.borrow_dependent().0, &22);
 }
 
@@ -389,7 +287,6 @@ impl<'a> From<&'a String> for NotSend<'a> {
 fn public_cell() {
     self_cell!(
         pub struct PubCell {
-            #[from]
             owner: String,
 
             #[covariant]
@@ -405,7 +302,6 @@ fn public_cell() {
 
 self_cell!(
     struct NotSendCell {
-        #[from]
         owner: String,
 
         #[covariant]
@@ -450,15 +346,8 @@ fn custom_drop() {
     type OV = Option<Vec<Void>>;
     type OvRef<'a> = Ref<'a, OV>;
 
-    impl<'a> Into<Ref<'a, OV>> for &'a OV {
-        fn into(self) -> Ref<'a, OV> {
-            Ref(self)
-        }
-    }
-
     self_cell!(
         struct CustomDrop {
-            #[from]
             owner: OV,
 
             #[covariant]
@@ -468,7 +357,7 @@ fn custom_drop() {
         impl {Debug, PartialEq, Eq}
     );
 
-    let cell = CustomDrop::new(None);
+    let cell = CustomDrop::new(None, |owner| Ref(owner));
 
     let expected_dependent = Ref::<'_, OV>(&None);
 
@@ -477,7 +366,9 @@ fn custom_drop() {
 
 #[test]
 fn dependent_mutate() {
-    let mut ast_cell = PackedAstCell::new("Egal in welchen Farben ihr den ..".into());
+    let mut ast_cell = PackedAstCell::new("Egal in welchen Farben ihr den ..".into(), |owner| {
+        owner.into()
+    });
 
     assert_eq!(ast_cell.borrow_dependent().0.len(), 2);
 
@@ -493,7 +384,7 @@ fn dependent_replace() {
     let before_input = String::from("Egal in welchen Farben ihr den ..");
     let before_ast_expected = Ast::from(&before_input);
 
-    let mut ast_cell = PackedAstCell::new(before_input.clone());
+    let mut ast_cell = PackedAstCell::new(before_input.clone(), |owner| owner.into());
 
     assert_eq!(ast_cell.borrow_owner(), &before_input);
     assert_eq!(ast_cell.borrow_dependent(), &before_ast_expected);
@@ -550,21 +441,20 @@ fn lazy_ast() {
     self_cell!(
         #[doc(hidden)]
         struct LazyAstCell {
-            #[from]
             owner: String,
 
             #[not_covariant]
             dependent: LazyAst,
         }
 
-        impl {Clone, Debug, PartialEq, Eq, Hash}
+        impl {Debug, PartialEq, Eq, Hash}
     );
 
     let body = String::from("How thou shall not see what trouts shall see");
 
     let expected_ast = Ast::from(&body);
 
-    let lazy_ast = LazyAstCell::new(body.clone());
+    let lazy_ast = LazyAstCell::new(body.clone(), |owner| owner.into());
     assert_eq!(lazy_ast.borrow_owner(), &body);
     lazy_ast.with_dependent(|owner, dependent| {
         assert_eq!(owner, &body);

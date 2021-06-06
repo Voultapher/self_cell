@@ -25,7 +25,6 @@ impl<'a> TryInto<PanicCtor<'a>> for &'a Owner {
 
 self_cell!(
     struct NoLeakCell {
-        #[try_from]
         owner: Owner,
 
         #[covariant]
@@ -38,8 +37,14 @@ self_cell!(
 fn main() {
     let owner = Owner("This string is no trout".into());
 
-    dbg!(NoLeakCell::try_from(owner)
-        .unwrap_err()
-        .downcast_ref::<&str>());
-    dbg!("But we keep going");
+    let err = NoLeakCell::try_new(owner, |owner| {
+        std::panic::catch_unwind(|| PanicCtor::new(owner))
+    })
+    .unwrap_err()
+    .downcast_ref::<&str>()
+    .unwrap()
+    .to_string();
+
+    println!("PanicCtor::new panic -> {}", err);
+    println!("But we keep going");
 }

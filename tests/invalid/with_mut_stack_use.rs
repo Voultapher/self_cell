@@ -4,7 +4,6 @@ type Dependent<'a> = &'a String;
 
 self_cell!(
     struct MutStackUse {
-        #[from_fn]
         owner: String,
 
         #[covariant]
@@ -15,7 +14,7 @@ self_cell!(
 fn main() {
     let outside_string = String::from("outside string");
 
-    let mut cell = MutStackUse::from_fn("Crackle that thunder".into(), |owner| owner);
+    let mut cell = MutStackUse::new("Crackle that thunder".into(), |owner| owner);
 
     cell.with_dependent_mut(|_, dependent| {
         *dependent = &outside_string;

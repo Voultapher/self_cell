@@ -15,7 +15,6 @@ In a nutshell, the API looks *roughly* like this:
 
 self_cell!(
     struct NewStructName {
-        #[from]
         owner: Owner,
 
         #[covariant]
@@ -74,48 +73,43 @@ use self_cell::self_cell;
 #[derive(Debug, Eq, PartialEq)]
 struct Ast<'a>(pub Vec<&'a str>);
 
-impl<'a> From<&'a String> for Ast<'a> {
-    fn from(code: &'a String) -> Self {
-        // Placeholder for expensive parsing.
-        Ast(code.split(' ').filter(|word| word.len() > 1).collect())
-    }
-}
-
 self_cell!(
     struct AstCell {
-        #[from]
         owner: String,
 
         #[covariant]
         dependent: Ast,
     }
 
-    impl {Clone, Debug, Eq, PartialEq}
+    impl {Debug, Eq, PartialEq}
 );
 
 fn build_ast_cell(code: &str) -> AstCell {
     // Create owning String on stack.
     let pre_processed_code = code.trim().to_string();
 
-    // Move String into AstCell, build Ast by calling pre_processed_code.into()
-    // and then return the AstCell.
-    AstCell::new(pre_processed_code)
+    // Move String into AstCell, then build Ast inplace.
+    AstCell::new(
+        pre_processed_code,
+        |code| Ast(code.split(' ').filter(|word| word.len() > 1).collect())
+    )
 }
 
 fn main() {
     let ast_cell = build_ast_cell("fox = cat + dog");
-    dbg!(&ast_cell);
-    dbg!(ast_cell.borrow_owner());
-    dbg!(ast_cell.borrow_dependent().0[1]);
+
+    println!("ast_cell -> {:?}", &ast_cell);
+    println!("ast_cell.borrow_owner() -> {:?}", ast_cell.borrow_owner());
+    println!("ast_cell.borrow_dependent().0[1] -> {:?}", ast_cell.borrow_dependent().0[1]);
 }
 ```
 
 ```
 $ cargo run
 
-[src/main.rs:36] &ast_cell = AstCell { owner: "fox = cat + dog", dependent: Ast(["fox", "cat", "dog"]) }
-[src/main.rs:37] ast_cell.borrow_owner() = "fox = cat + dog"
-[src/main.rs:38] ast_cell.borrow_dependent().0[1] = "cat"
+ast_cell -> AstCell { owner: "fox = cat + dog", dependent: Ast(["fox", "cat", "dog"]) }
+ast_cell.borrow_owner() -> "fox = cat + dog"
+ast_cell.borrow_dependent().0[1] -> "cat"
 ```
 
 There is no way in safe Rust to have an API like `build_ast_cell`, as soon as

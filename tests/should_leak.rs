@@ -5,17 +5,10 @@ use self_cell::self_cell;
 fn panic_in_from_owner() {
     // Check that no UB happens when from owner panics.
 
-    struct Dependent<'a>(&'a String);
-
-    impl<'a> From<&'a String> for Dependent<'a> {
-        fn from(_: &'a String) -> Self {
-            panic!()
-        }
-    }
+    type Dependent<'a> = &'a String;
 
     self_cell!(
         struct PanicCell {
-            #[from]
             owner: String,
 
             #[covariant]
@@ -24,7 +17,7 @@ fn panic_in_from_owner() {
     );
 
     let result = std::panic::catch_unwind(|| {
-        let _panic_cell = PanicCell::new("some longer string it is".into());
+        let _panic_cell = PanicCell::new("some longer string it is".into(), |_| panic!());
     });
     assert!(result.is_err());
 }

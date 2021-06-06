@@ -2,17 +2,10 @@ use std::cell::Cell;
 
 use self_cell::self_cell;
 
-struct NotCovariant<'a>(Cell<&'a String>);
-
-impl<'a> From<&'a String> for NotCovariant<'a> {
-    fn from(s: &'a String) -> Self {
-        Self(Cell::new(s))
-    }
-}
+type NotCovariant<'a> = Cell<&'a String>;
 
 self_cell!(
     struct NoCov {
-        #[from]
         owner: String,
 
         #[not_covariant]
@@ -21,6 +14,6 @@ self_cell!(
 );
 
 fn main() {
-    let cell = NoCov::new("hi this is no good".into());
+    let cell = NoCov::new("hi this is no good".into(), |owner| Cell::new(owner));
     let _leaked_ref = cell.with_dependent(|_, dependent| dependent);
 }

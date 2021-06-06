@@ -6,4 +6,4 @@ The advanced examples:
 
 - [How to build a lazy AST with self_cell](lazy_ast)
 
-- [How to avoid leaking memory if Dependen::from(&Owner) panics](no_leak_panic_from)
+- [How to avoid leaking memory if building the dependent panics](no_leak_panic_from)
