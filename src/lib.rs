@@ -256,6 +256,13 @@ macro_rules! _impl_automatic_derive {
 /// ) -> Result<Self, Err>
 /// ```
 ///
+/// ```ignore
+/// fn try_new_or_recover<Err>(
+///     owner: $Owner,
+///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+/// ) -> Result<Self, ($Owner, Err)>
+/// ```
+///
 /// The macro implements these methods:
 ///
 /// ```ignore
@@ -474,6 +481,66 @@ macro_rules! self_cell {
                         $crate::alloc::alloc::dealloc(joined_void_ptr.as_ptr(), layout);
 
                         Err(err)
+                    }
+                }
+            }
+        }
+
+        $Vis fn try_new_or_recover<Err>(
+            owner: $Owner,
+            dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+        ) -> Result<Self, ($Owner, Err)> {
+            use core::ptr::NonNull;
+
+            unsafe {
+                // All this has to happen here, because there is not good way
+                // of passing the appropriate logic into UnsafeSelfCell::new
+                // short of assuming Dependent<'static> is the same as
+                // Dependent<'a>, which I'm not confident is safe.
+
+                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
+
+                let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+
+                let joined_void_ptr = NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
+
+                let mut joined_ptr = core::mem::transmute::<NonNull<u8>, NonNull<JoinedCell>>(
+                    joined_void_ptr
+                );
+
+                let joined = joined_ptr.as_mut();
+
+                // Move owner into newly allocated space.
+                core::ptr::addr_of_mut!(joined.owner).write(owner);
+
+                // Attempt to initialize dependent with owner reference in final place.
+                let mut try_inplace_init = |joined_void_ptr_c: NonNull<u8>| -> Result<(), Err> {
+                    let mut joined_ptr_c = core::mem::transmute::<NonNull<u8>, NonNull<JoinedCell>>(
+                        joined_void_ptr_c
+                    );
+
+                    let joined_c = joined_ptr_c.as_mut();
+
+                    core::ptr::addr_of_mut!(joined_c.dependent)
+                        .write(dependent_builder(&joined_c.owner)?);
+
+                    Ok(())
+                };
+
+                match try_inplace_init(joined_void_ptr) {
+                    Ok(()) => Ok(Self {
+                        unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
+                            joined_void_ptr,
+                        ),
+                    }),
+                    Err(err) => {
+                        // Move owner out so it can be returned.
+                        let owner_on_err = core::ptr::read(core::ptr::addr_of_mut!(joined.owner));
+
+                        // Clean up partially initialized joined_cell.
+                        $crate::alloc::alloc::dealloc(joined_void_ptr.as_ptr(), layout);
+
+                        Err((owner_on_err, err))
                     }
                 }
             }

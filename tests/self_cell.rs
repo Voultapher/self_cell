@@ -397,6 +397,17 @@ fn dependent_replace() {
 }
 
 #[test]
+fn try_new_or_recover() {
+    let original_input = String::from("Ein See aus Schweiß ..");
+
+    let (input, err) =
+        PackedAstCell::try_new_or_recover(original_input.clone(), |_| Err(-1)).unwrap_err();
+
+    assert_eq!(original_input, input);
+    assert_eq!(err, -1);
+}
+
+#[test]
 fn share_across_threads() {
     // drop_joined takes &mut self, so that's not a thread concern anyway.
     // And get_or_init_dependent should be as thread compatible as OnceCell.
