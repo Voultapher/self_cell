@@ -288,6 +288,10 @@ macro_rules! _impl_automatic_derive {
 /// ) -> Ret
 /// ```
 ///
+/// ```ignore
+/// fn into_owner(self) -> $Owner
+/// ```
+///
 ///
 /// NOTE: If building the dependent panics, the value of owner and a heap struct
 /// will be leaked. This is safe, but might not be what you want. See [How to
@@ -372,6 +376,7 @@ macro_rules! self_cell {
 
     $(impl {$($AutomaticDerive:ident),*})?
 ) => {
+    #[repr(transparent)]
     $(#[$StructMeta])*
     $Vis struct $StructName {
         unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
@@ -568,6 +573,21 @@ macro_rules! self_cell {
         }
 
         $crate::_covariant_access!($Covariance, $Vis, $Dependent);
+
+        $Vis fn into_owner(self) -> $Owner {
+            // This is only safe to do with repr(transparent).
+            let unsafe_self_cell = unsafe { core::mem::transmute::<
+                Self,
+                $crate::unsafe_self_cell::UnsafeSelfCell<
+                    $Owner,
+                    $Dependent<'static>
+                >
+            >(self) };
+
+            let owner = unsafe { unsafe_self_cell.into_owner::<$Dependent>() };
+
+            owner
+        }
     }
 
     impl Drop for $StructName {

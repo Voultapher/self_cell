@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 use core::mem::transmute;
-use core::ptr::{drop_in_place, NonNull};
+use core::ptr::{drop_in_place, read, NonNull};
 
 extern crate alloc;
 
@@ -75,6 +75,24 @@ impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
         let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
 
         dealloc(self.joined_void_ptr.as_ptr(), layout);
+    }
+
+    pub unsafe fn into_owner<Dependent>(self) -> Owner {
+        let joined_ptr =
+            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
+
+        let owner_ptr: *const Owner = &(*joined_ptr.as_ptr()).owner;
+
+        // Move owner out so it can be returned.
+        let owner = read(owner_ptr);
+
+        // Clean up rest of JoinedCell
+        drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
+
+        let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
+        dealloc(self.joined_void_ptr.as_ptr(), layout);
+
+        owner
     }
 }
 

@@ -3,6 +3,7 @@
 #![deny(private_in_public)]
 
 use std::fmt::Debug;
+use std::rc::Rc;
 
 use crossbeam_utils::thread;
 
@@ -405,6 +406,38 @@ fn try_new_or_recover() {
 
     assert_eq!(original_input, input);
     assert_eq!(err, -1);
+}
+
+#[test]
+fn into_owner() {
+    // The Rc stuff here is somewhat tangential to what is being tested here.
+    // The regular type system should enforce most of the invariants of into_owner
+    // and miri should detect leaks.
+
+    self_cell!(
+        struct RcAstCell {
+            owner: Rc<String>,
+
+            #[covariant]
+            dependent: Ast,
+        }
+    );
+
+    let expected_body = Rc::new(String::from("Endless joy for you never 2"));
+
+    // expected_ast is on the stack and lifetime dependent on body.
+    let expected_ast = Ast::from(&*expected_body);
+
+    let ast_cell = RcAstCell::new(Rc::clone(&expected_body), |s| Ast::from(&**s));
+    assert_eq!(ast_cell.borrow_owner(), &expected_body);
+    assert_eq!(ast_cell.borrow_dependent(), &expected_ast);
+
+    let body_recovered: Rc<String> = ast_cell.into_owner();
+    assert_eq!(&body_recovered, &expected_body);
+    assert_eq!(Rc::strong_count(&expected_body), 2);
+
+    // This shouldn't be possible anymore.
+    // assert_eq!(ast_cell.borrow_owner(), &expected_body);
 }
 
 #[test]
