@@ -1,6 +1,6 @@
 [package]
 name = "self_cell"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -10,7 +10,7 @@ readme = "README.md"
 documentation = "https://docs.rs/self_cell"
 
 repository = "https://github.com/Voultapher/self_cell"
-keywords = ["lazy", "lifetime", "borrowing", "self", "reference"]
+keywords = ["lifetime", "borrowing", "self", "reference", "intrusive"]
 categories = ["rust-patterns", "memory-management"]
 
 include = [
