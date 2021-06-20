@@ -408,6 +408,7 @@ macro_rules! self_cell {
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+                assert!(layout.size() != 0);
 
                 let joined_void_ptr = NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
 
@@ -447,6 +448,7 @@ macro_rules! self_cell {
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+                assert!(layout.size() != 0);
 
                 let joined_void_ptr = NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
 
@@ -506,6 +508,7 @@ macro_rules! self_cell {
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
+                assert!(layout.size() != 0);
 
                 let joined_void_ptr = NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
 

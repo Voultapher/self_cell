@@ -3,6 +3,8 @@
 #![deny(private_in_public)]
 
 use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::panic::catch_unwind;
 use std::rc::Rc;
 
 use crossbeam_utils::thread;
@@ -219,14 +221,6 @@ fn catch_panic_in_from() {
         }
     }
 
-    // impl<'a> TryInto<PanicCtor<'a>> for &'a Owner {
-    //     type Error = Box<dyn std::any::Any + Send + 'static>;
-
-    //     fn try_into(self) -> Result<PanicCtor<'a>, Self::Error> {
-    //         std::panic::catch_unwind(|| PanicCtor::new(&self))
-    //     }
-    // }
-
     self_cell!(
         struct NoLeakCell {
             owner: Owner,
@@ -242,7 +236,7 @@ fn catch_panic_in_from() {
     let owner = Owner("This string is no trout".into());
 
     let ast_cell_result = NoLeakCell::try_new(owner.clone(), |owner| {
-        std::panic::catch_unwind(|| PanicCtor::new(&owner))
+        catch_unwind(|| PanicCtor::new(&owner))
     });
     assert!(ast_cell_result.is_err());
 }
@@ -438,6 +432,36 @@ fn into_owner() {
 
     // This shouldn't be possible anymore.
     // assert_eq!(ast_cell.borrow_owner(), &expected_body);
+}
+
+#[test]
+fn zero_size_cell() {
+    struct ZeroSizeRef<'a>(PhantomData<&'a ()>);
+
+    self_cell!(
+        struct ZeroSizeCell {
+            owner: (),
+
+            #[covariant]
+            dependent: ZeroSizeRef,
+        }
+    );
+
+    assert!(catch_unwind(|| ZeroSizeCell::new((), |_| ZeroSizeRef(PhantomData))).is_err());
+
+    assert!(
+        catch_unwind(|| ZeroSizeCell::try_new((), |_| -> Result<_, i32> {
+            Ok(ZeroSizeRef(PhantomData))
+        }))
+        .is_err()
+    );
+
+    assert!(catch_unwind(
+        || ZeroSizeCell::try_new_or_recover((), |_| -> Result<_, i32> {
+            Ok(ZeroSizeRef(PhantomData))
+        })
+    )
+    .is_err());
 }
 
 #[test]
