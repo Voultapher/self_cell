@@ -1,0 +1,24 @@
+[package]
+name = "benchmarks"
+version = "0.1.0"
+authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+self_cell = { path = "../" }
+
+[dev-dependencies]
+criterion = "0.3"
+iai = "0.1"
+
+[[bench]]
+name = "time"
+path = "src/time.rs"
+harness = false
+
+[[bench]]
+name = "instructions"
+path = "src/instructions.rs"
+harness = false

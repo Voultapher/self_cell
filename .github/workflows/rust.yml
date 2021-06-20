@@ -22,6 +22,10 @@ jobs:
         cargo run --verbose --bin fallible_dependent_construction
         cargo run --verbose --bin lazy_ast
         cargo run --verbose --bin no_leak_panic
+    - name: Build benchmarks
+      run: |
+        cd benchmarks
+        cargo build --release --verbose
   
   miri:
     runs-on: ubuntu-latest
