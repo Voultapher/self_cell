@@ -5,5 +5,3 @@ The advanced examples:
 - [How to handle dependent construction that can fail](fallible_dependent_construction)
 
 - [How to build a lazy AST with self_cell](lazy_ast)
-
-- [How to avoid leaking memory if building the dependent panics](no_leak_panic_from)

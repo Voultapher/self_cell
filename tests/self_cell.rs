@@ -395,11 +395,20 @@ fn dependent_replace() {
 fn try_new_or_recover() {
     let original_input = String::from("Ein See aus Schweiß ..");
 
+    // bad path
     let (input, err) =
         PackedAstCell::try_new_or_recover(original_input.clone(), |_| Err(-1)).unwrap_err();
 
     assert_eq!(original_input, input);
     assert_eq!(err, -1);
+
+    // happy path
+    let cell = PackedAstCell::try_new_or_recover(original_input.clone(), |o| -> Result<_, ()> {
+        Ok(o.into())
+    })
+    .unwrap();
+    assert_eq!(cell.borrow_owner(), &original_input);
+    assert_eq!(cell.borrow_dependent(), &Ast::from(&original_input));
 }
 
 #[test]
@@ -462,6 +471,39 @@ fn zero_size_cell() {
         })
     )
     .is_err());
+}
+
+#[test]
+fn panic_in_from_owner() {
+    // panicing in user provided code shouldn't leak memory.
+
+    type Dependent<'a> = &'a String;
+
+    self_cell!(
+        struct PanicCell {
+            owner: String,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+    );
+
+    let owner = String::from("panic_in_from_owner");
+
+    let new_result = std::panic::catch_unwind(|| {
+        let _ = PanicCell::new(owner.clone(), |_| panic!());
+    });
+    assert!(new_result.is_err());
+
+    let try_new_result = std::panic::catch_unwind(|| {
+        let _ = PanicCell::try_new(owner.clone(), |_| -> Result<_, Box<i32>> { panic!() });
+    });
+    assert!(try_new_result.is_err());
+
+    let try_new_or_recover_result = std::panic::catch_unwind(|| {
+        let _ = PanicCell::try_new_or_recover(owner.clone(), |_| -> Result<_, i32> { panic!() });
+    });
+    assert!(try_new_or_recover_result.is_err());
 }
 
 #[test]

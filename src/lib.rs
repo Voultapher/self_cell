@@ -131,9 +131,6 @@
 //!
 //! - [How to build a lazy AST with
 //!   self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
-//!
-//! - [How to avoid leaking memory if building the dependent
-//!   panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic)
 
 #![no_std]
 
@@ -293,11 +290,6 @@ macro_rules! _impl_automatic_derive {
 /// ```
 ///
 ///
-/// NOTE: If building the dependent panics, the value of owner and a heap struct
-/// will be leaked. This is safe, but might not be what you want. See [How to
-/// avoid leaking memory if building the dependent
-/// panics](https://github.com/Voultapher/self_cell/tree/main/examples/no_leak_panic).
-///
 /// ### Parameters:
 ///
 /// - `$Vis:vis struct $StructName:ident` Name of the struct that will be
@@ -416,14 +408,19 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let joined = joined_ptr.as_mut();
+                let owner_ptr: *mut $Owner = &mut (*joined_ptr.as_ptr()).owner;
+                let dependent_ptr: *mut $Dependent = &mut (*joined_ptr.as_ptr()).dependent;
 
                 // Move owner into newly allocated space.
-                core::ptr::addr_of_mut!(joined.owner).write(owner);
+                owner_ptr.write(owner);
+
+                // Drop guard that cleans up should building the dependent panic.
+                let mut drop_guard =
+                    $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
                 // Initialize dependent with owner reference in final place.
-                core::ptr::addr_of_mut!(joined.dependent)
-                    .write(dependent_builder(&joined.owner));
+                dependent_ptr.write(dependent_builder(&*owner_ptr));
+                drop_guard.mark_fully_init();
 
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -440,10 +437,7 @@ macro_rules! self_cell {
             use core::ptr::NonNull;
 
             unsafe {
-                // All this has to happen here, because there is not good way
-                // of passing the appropriate logic into UnsafeSelfCell::new
-                // short of assuming Dependent<'static> is the same as
-                // Dependent<'a>, which I'm not confident is safe.
+                // See fn new for more explanation.
 
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
@@ -456,39 +450,28 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let joined = joined_ptr.as_mut();
+                let owner_ptr: *mut $Owner = &mut (*joined_ptr.as_ptr()).owner;
+                let dependent_ptr: *mut $Dependent = &mut (*joined_ptr.as_ptr()).dependent;
 
                 // Move owner into newly allocated space.
-                core::ptr::addr_of_mut!(joined.owner).write(owner);
+                owner_ptr.write(owner);
 
-                // Attempt to initialize dependent with owner reference in final place.
-                let mut try_inplace_init = |joined_void_ptr_c: NonNull<u8>| -> Result<(), Err> {
-                    let mut joined_ptr_c = core::mem::transmute::<NonNull<u8>, NonNull<JoinedCell>>(
-                        joined_void_ptr_c
-                    );
+                // Drop guard that cleans up should building the dependent panic.
+                let mut drop_guard =
+                    $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
-                    let joined_c = joined_ptr_c.as_mut();
+                match dependent_builder(&*owner_ptr) {
+                    Ok(dependent) => {
+                        dependent_ptr.write(dependent);
+                        drop_guard.mark_fully_init();
 
-                    core::ptr::addr_of_mut!(joined_c.dependent)
-                        .write(dependent_builder(&joined_c.owner)?);
-
-                    Ok(())
-                };
-
-                match try_inplace_init(joined_void_ptr) {
-                    Ok(()) => Ok(Self {
-                        unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
-                            joined_void_ptr,
-                        ),
-                    }),
-                    Err(err) => {
-                        // Clean up partially initialized joined_cell.
-                        core::ptr::drop_in_place(core::ptr::addr_of_mut!(joined.owner));
-
-                        $crate::alloc::alloc::dealloc(joined_void_ptr.as_ptr(), layout);
-
-                        Err(err)
+                        Ok(Self {
+                            unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
+                                joined_void_ptr,
+                            ),
+                        })
                     }
+                    Err(err) => Err(err)
                 }
             }
         }
@@ -500,10 +483,7 @@ macro_rules! self_cell {
             use core::ptr::NonNull;
 
             unsafe {
-                // All this has to happen here, because there is not good way
-                // of passing the appropriate logic into UnsafeSelfCell::new
-                // short of assuming Dependent<'static> is the same as
-                // Dependent<'a>, which I'm not confident is safe.
+                // See fn new for more explanation.
 
                 type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
 
@@ -516,36 +496,33 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let joined = joined_ptr.as_mut();
+                let owner_ptr: *mut $Owner = &mut (*joined_ptr.as_ptr()).owner;
+                let dependent_ptr: *mut $Dependent = &mut (*joined_ptr.as_ptr()).dependent;
 
                 // Move owner into newly allocated space.
-                core::ptr::addr_of_mut!(joined.owner).write(owner);
+                owner_ptr.write(owner);
 
-                // Attempt to initialize dependent with owner reference in final place.
-                let mut try_inplace_init = |joined_void_ptr_c: NonNull<u8>| -> Result<(), Err> {
-                    let mut joined_ptr_c = core::mem::transmute::<NonNull<u8>, NonNull<JoinedCell>>(
-                        joined_void_ptr_c
-                    );
+                // Drop guard that cleans up should building the dependent panic.
+                let mut drop_guard =
+                    $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
-                    let joined_c = joined_ptr_c.as_mut();
+                match dependent_builder(&*owner_ptr) {
+                    Ok(dependent) => {
+                        dependent_ptr.write(dependent);
+                        drop_guard.mark_fully_init();
 
-                    core::ptr::addr_of_mut!(joined_c.dependent)
-                        .write(dependent_builder(&joined_c.owner)?);
-
-                    Ok(())
-                };
-
-                match try_inplace_init(joined_void_ptr) {
-                    Ok(()) => Ok(Self {
-                        unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
-                            joined_void_ptr,
-                        ),
-                    }),
+                        Ok(Self {
+                            unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
+                                joined_void_ptr,
+                            ),
+                        })
+                    }
                     Err(err) => {
-                        // Move owner out so it can be returned.
-                        let owner_on_err = core::ptr::read(core::ptr::addr_of_mut!(joined.owner));
+                        let owner_on_err = core::ptr::read(owner_ptr);
 
-                        // Clean up partially initialized joined_cell.
+                        // Allowing drop_guard to finish would let it double free owner.
+                        // So we dealloc the JoinedCell here manually.
+                        drop_guard.mark_fully_init();
                         $crate::alloc::alloc::dealloc(joined_void_ptr.as_ptr(), layout);
 
                         Err((owner_on_err, err))

@@ -111,3 +111,45 @@ where
     DependentStatic: Sync,
 {
 }
+
+// This struct is used to safely deallocate only the owner if dependent
+// construction fails.
+#[doc(hidden)]
+pub struct OwnerAndCellDropGuard<Owner, Dependent> {
+    fully_init: bool,
+    joined_ptr: NonNull<JoinedCell<Owner, Dependent>>,
+}
+
+impl<Owner, Dependent> OwnerAndCellDropGuard<Owner, Dependent> {
+    pub fn new(joined_ptr: NonNull<JoinedCell<Owner, Dependent>>) -> Self {
+        Self {
+            fully_init: false,
+            joined_ptr,
+        }
+    }
+
+    pub fn mark_fully_init(&mut self) {
+        self.fully_init = true;
+    }
+}
+
+impl<Owner, Dependent> Drop for OwnerAndCellDropGuard<Owner, Dependent> {
+    fn drop(&mut self) {
+        if self.fully_init {
+            // We took over ownership and no cleanup should be done.
+            return;
+        }
+
+        unsafe {
+            // We must only drop owner and the struct itself,
+            // The whole point of this drop guard is to clean up the partially
+            // initialized struct should building the dependent fail.
+            drop_in_place(&mut (*self.joined_ptr.as_ptr()).owner);
+
+            let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
+            let joined_void_ptr =
+                transmute::<*mut JoinedCell<Owner, Dependent>, *mut u8>(self.joined_ptr.as_ptr());
+            dealloc(joined_void_ptr, layout);
+        }
+    }
+}

@@ -21,7 +21,6 @@ jobs:
         cd examples
         cargo run --verbose --bin fallible_dependent_construction
         cargo run --verbose --bin lazy_ast
-        cargo run --verbose --bin no_leak_panic
     - name: Build benchmarks
       run: |
         cd benchmarks
@@ -44,22 +43,18 @@ jobs:
     - name: Run tests x86_64-unknown-linux-gnu
       run: |
         cargo miri test --verbose --target x86_64-unknown-linux-gnu
-        MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test --verbose --target x86_64-unknown-linux-gnu --test should_leak -- --ignored
     - name: Run examples x86_64-unknown-linux-gnu
       run: |
         cd examples
         cargo miri run --verbose --bin fallible_dependent_construction
         cargo miri run --verbose --bin lazy_ast
-        cargo miri run --verbose --bin no_leak_panic
 
     - name: Run tests mips64-unknown-linux-gnuabi64
       run: |
         cargo miri test --verbose --target mips64-unknown-linux-gnuabi64
-        MIRIFLAGS="-Zmiri-ignore-leaks" cargo miri test --verbose --target mips64-unknown-linux-gnuabi64 --test should_leak -- --ignored
     - name: Run examples mips64-unknown-linux-gnuabi64
       run: |
         cd examples
         cargo miri run --verbose --bin fallible_dependent_construction
         cargo miri run --verbose --bin lazy_ast
-        cargo miri run --verbose --bin no_leak_panic
 
