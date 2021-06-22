@@ -32,7 +32,6 @@ pub fn i32_list(n: i32) -> i32 {
 
 // The list functions mostly test L1 access
 // Let's also test pseudo random access.
-
 pub fn i32_random(n: i32) -> i32 {
     let mut side_effect = 0;
 
@@ -43,6 +42,33 @@ pub fn i32_random(n: i32) -> i32 {
 
     while side_effect < n * 2 {
         side_effect += **cells[(side_effect as usize) % (cells.len() - 66)].borrow_dependent() + 1;
+    }
+
+    side_effect
+}
+
+// This function walks through an vec options, and only looks at some of them.
+// This simulates sparse access as part of larger construct.
+pub fn i32_sparse(n: i32) -> i32 {
+    let mut side_effect = 0;
+
+    let cells = (0..n)
+        .into_iter()
+        .map(|x| {
+            if x % 8 == 0 {
+                Some(I32Cell::new(x, |x| x))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    for cell_opt in cells {
+        side_effect += if let Some(cell) = cell_opt {
+            **cell.borrow_dependent()
+        } else {
+            3
+        };
     }
 
     side_effect
@@ -101,6 +127,31 @@ pub fn string_random(n: i32) -> i32 {
             .map(|x| i32::from_str(x).unwrap())
             .sum::<i32>()
             + 1;
+    }
+
+    side_effect
+}
+
+pub fn string_sparse(n: i32) -> i32 {
+    let mut side_effect = 0;
+
+    let cells = (0..n)
+        .into_iter()
+        .map(|x| {
+            if x % 8 == 0 {
+                Some(StringCell::new(x.to_string(), ast_from_string))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    for cell_opt in cells {
+        side_effect += if let Some(cell) = cell_opt {
+            cell.borrow_owner().len() as i32
+        } else {
+            3
+        };
     }
 
     side_effect

@@ -17,6 +17,13 @@ pub fn i32_benchmarks(c: &mut Criterion) {
     c.bench_function("i32_random_1m", |b| {
         b.iter(|| i32_random(black_box(1_000_000)))
     });
+    c.bench_function("i32_sparse_1k", |b| b.iter(|| i32_sparse(black_box(1_000))));
+    c.bench_function("i32_sparse_100k", |b| {
+        b.iter(|| i32_sparse(black_box(100_000)))
+    });
+    c.bench_function("i32_sparse_1m", |b| {
+        b.iter(|| i32_sparse(black_box(1_000_000)))
+    });
 }
 
 criterion_group!(i32_benches, i32_benchmarks);
@@ -39,6 +46,12 @@ pub fn string_benchmarks(c: &mut Criterion) {
     });
     c.bench_function("string_random_100k", |b| {
         b.iter(|| string_random(black_box(100_000)))
+    });
+    c.bench_function("string_sparse_1k", |b| {
+        b.iter(|| string_sparse(black_box(1_000)))
+    });
+    c.bench_function("string_sparse_100k", |b| {
+        b.iter(|| string_sparse(black_box(100_000)))
     });
 }
 

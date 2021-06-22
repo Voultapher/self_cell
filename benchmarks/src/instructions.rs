@@ -34,6 +34,18 @@ fn i32_random_1m() -> i32 {
     i32_random(black_box(1_000_000))
 }
 
+fn i32_sparse_1k() -> i32 {
+    i32_sparse(1_000)
+}
+
+fn i32_sparse_100k() -> i32 {
+    i32_sparse(100_000)
+}
+
+fn i32_sparse_1m() -> i32 {
+    i32_sparse(1_000_000)
+}
+
 fn string_cell_new() -> StringCell {
     benchmarks::benchmarks::string_cell_new(black_box("cantelope for mars yes no".into()))
 }
@@ -58,6 +70,14 @@ fn string_random_100k() -> i32 {
     string_random(black_box(100_000))
 }
 
+fn string_sparse_1k() -> i32 {
+    string_sparse(black_box(1_000))
+}
+
+fn string_sparse_100k() -> i32 {
+    string_sparse(black_box(100_000))
+}
+
 iai::main!(
     i32_cell_new,
     i32_cell_try_new_ok,
@@ -67,10 +87,15 @@ iai::main!(
     i32_random_1k,
     i32_random_100k,
     i32_random_1m,
+    i32_sparse_1k,
+    i32_sparse_100k,
+    i32_sparse_1m,
     string_cell_new,
     string_cell_try_new_ok,
     string_list_1k,
     string_list_100k,
     string_random_1k,
     string_random_100k,
+    string_sparse_1k,
+    string_sparse_100k,
 );
