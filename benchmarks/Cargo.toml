@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 self_cell = { path = "../" }
+ouroboros = { version = "0.9.3", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
@@ -22,3 +23,7 @@ harness = false
 name = "instructions"
 path = "src/instructions.rs"
 harness = false
+
+[features]
+# Use ouroboros as self-referential struct implementation.
+ouroboros_compare = ["ouroboros"]

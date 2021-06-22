@@ -1,17 +1,10 @@
 use std::str::FromStr;
 
-use self_cell::self_cell;
+#[cfg(not(feature = "ouroboros_compare"))]
+pub use crate::self_cell_cells::{Ast, I32Cell, StringCell};
 
-type I32Ref<'a> = &'a i32;
-
-self_cell!(
-    pub struct I32Cell {
-        owner: i32,
-
-        #[covariant]
-        dependent: I32Ref,
-    }
-);
+#[cfg(feature = "ouroboros_compare")]
+pub use crate::ouroboros_cells::{Ast, I32Cell, StringCell};
 
 pub fn i32_cell_new(x: i32) -> I32Cell {
     I32Cell::new(x, |o| o)
@@ -55,20 +48,9 @@ pub fn i32_random(n: i32) -> i32 {
     side_effect
 }
 
-type Ast<'a> = Vec<&'a str>;
-
 pub fn ast_from_string(body: &String) -> Ast {
     body.split("+").filter(|x| x.len() > 1).collect()
 }
-
-self_cell!(
-    pub struct StringCell {
-        owner: String,
-
-        #[covariant]
-        dependent: Ast,
-    }
-);
 
 pub fn string_cell_new(x: String) -> StringCell {
     StringCell::new(x, ast_from_string)
