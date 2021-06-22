@@ -17,7 +17,10 @@ pub fn i32_cell_try_new_ok(x: i32) -> Result<I32Cell, Box<u32>> {
 pub fn i32_list(n: i32) -> i32 {
     let mut side_effect = 0;
 
-    let cells = (0..n).into_iter().map(|x| I32Cell::new(x, |x| x));
+    let cells = (0..n)
+        .into_iter()
+        .map(|x| I32Cell::new(x, |x| x))
+        .collect::<Vec<_>>();
 
     for cell in cells {
         side_effect += if **cell.borrow_dependent() % 66 == 0 {
@@ -91,7 +94,8 @@ pub fn string_list(n: i32) -> i32 {
 
     let cells = (0..n)
         .into_iter()
-        .map(|x| StringCell::new(x.to_string(), ast_from_string));
+        .map(|x| StringCell::new(x.to_string(), ast_from_string))
+        .collect::<Vec<_>>();
 
     for cell in cells {
         let val = cell
