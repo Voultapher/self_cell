@@ -50,7 +50,7 @@ pub type Ast<'a> = Vec<&'a str>;
 
 #[self_referencing]
 pub struct StringCellImpl {
-    owner: Box<String>,
+    owner: String,
 
     #[borrows(owner)]
     #[covariant]
@@ -60,13 +60,10 @@ pub struct StringCellImpl {
 pub struct StringCell(StringCellImpl);
 
 impl StringCell {
-    pub fn new(
-        owner: String,
-        dependent_builder: impl for<'a> FnOnce(&'a String) -> Ast<'a>,
-    ) -> Self {
+    pub fn new(owner: String, dependent_builder: impl for<'a> FnOnce(&'a str) -> Ast<'a>) -> Self {
         Self(
             StringCellImplBuilder {
-                owner: Box::new(owner),
+                owner,
                 dependent_builder,
             }
             .build(),
@@ -75,11 +72,11 @@ impl StringCell {
 
     pub fn try_new<E>(
         owner: String,
-        dependent_builder: impl for<'a> FnOnce(&'a String) -> Result<Ast<'a>, E>,
+        dependent_builder: impl for<'a> FnOnce(&'a str) -> Result<Ast<'a>, E>,
     ) -> Result<Self, E> {
         Ok(Self(
             StringCellImplTryBuilder {
-                owner: Box::new(owner),
+                owner,
                 dependent_builder,
             }
             .try_build()?,

@@ -77,12 +77,12 @@ pub fn i32_sparse(n: i32) -> i32 {
     side_effect
 }
 
-pub fn ast_from_string(body: &String) -> Ast {
+pub fn ast_from_string(body: &str) -> Ast {
     body.split("+").filter(|x| x.len() > 1).collect()
 }
 
 pub fn string_cell_new(x: String) -> StringCell {
-    StringCell::new(x, ast_from_string)
+    StringCell::new(x, |o| ast_from_string(o))
 }
 
 pub fn string_cell_try_new_ok(x: String) -> Result<StringCell, Box<u32>> {
@@ -94,7 +94,7 @@ pub fn string_list(n: i32) -> i32 {
 
     let cells = (0..n)
         .into_iter()
-        .map(|x| StringCell::new(x.to_string(), ast_from_string))
+        .map(|x| StringCell::new(x.to_string(), |o| ast_from_string(o)))
         .collect::<Vec<_>>();
 
     for cell in cells {
@@ -121,7 +121,7 @@ pub fn string_random(n: i32) -> i32 {
 
     let cells = (0..n)
         .into_iter()
-        .map(|x| StringCell::new(x.to_string(), ast_from_string))
+        .map(|x| StringCell::new(x.to_string(), |o| ast_from_string(o)))
         .collect::<Vec<_>>();
 
     while side_effect < n * 2 {
@@ -143,7 +143,7 @@ pub fn string_sparse(n: i32) -> i32 {
         .into_iter()
         .map(|x| {
             if x % 8 == 0 {
-                Some(StringCell::new(x.to_string(), ast_from_string))
+                Some(StringCell::new(x.to_string(), |o| ast_from_string(o)))
             } else {
                 None
             }
