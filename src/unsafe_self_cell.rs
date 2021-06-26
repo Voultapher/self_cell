@@ -114,32 +114,21 @@ where
 
 // This struct is used to safely deallocate only the owner if dependent
 // construction fails.
+//
+// mem::forget it once it's no longer needed or dtor will be UB.
 #[doc(hidden)]
 pub struct OwnerAndCellDropGuard<Owner, Dependent> {
-    fully_init: bool,
     joined_ptr: NonNull<JoinedCell<Owner, Dependent>>,
 }
 
 impl<Owner, Dependent> OwnerAndCellDropGuard<Owner, Dependent> {
-    pub fn new(joined_ptr: NonNull<JoinedCell<Owner, Dependent>>) -> Self {
-        Self {
-            fully_init: false,
-            joined_ptr,
-        }
-    }
-
-    pub fn mark_fully_init(&mut self) {
-        self.fully_init = true;
+    pub unsafe fn new(joined_ptr: NonNull<JoinedCell<Owner, Dependent>>) -> Self {
+        Self { joined_ptr }
     }
 }
 
 impl<Owner, Dependent> Drop for OwnerAndCellDropGuard<Owner, Dependent> {
     fn drop(&mut self) {
-        if self.fully_init {
-            // We took over ownership and no cleanup should be done.
-            return;
-        }
-
         unsafe {
             // We must only drop owner and the struct itself,
             // The whole point of this drop guard is to clean up the partially

@@ -420,7 +420,7 @@ macro_rules! self_cell {
 
                 // Initialize dependent with owner reference in final place.
                 dependent_ptr.write(dependent_builder(&*owner_ptr));
-                drop_guard.mark_fully_init();
+                core::mem::forget(drop_guard);
 
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -463,7 +463,7 @@ macro_rules! self_cell {
                 match dependent_builder(&*owner_ptr) {
                     Ok(dependent) => {
                         dependent_ptr.write(dependent);
-                        drop_guard.mark_fully_init();
+                        core::mem::forget(drop_guard);
 
                         Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -509,7 +509,7 @@ macro_rules! self_cell {
                 match dependent_builder(&*owner_ptr) {
                     Ok(dependent) => {
                         dependent_ptr.write(dependent);
-                        drop_guard.mark_fully_init();
+                        core::mem::forget(drop_guard);
 
                         Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -522,7 +522,7 @@ macro_rules! self_cell {
 
                         // Allowing drop_guard to finish would let it double free owner.
                         // So we dealloc the JoinedCell here manually.
-                        drop_guard.mark_fully_init();
+                        core::mem::forget(drop_guard);
                         $crate::alloc::alloc::dealloc(joined_void_ptr.as_ptr(), layout);
 
                         Err((owner_on_err, err))
