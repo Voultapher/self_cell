@@ -474,6 +474,44 @@ fn zero_size_cell() {
 }
 
 #[test]
+fn nested_cells() {
+    // TODO allow automatic impls.
+    // impl {Debug, PartialEq, Eq, Hash}
+    self_cell!(
+        struct ChildCell<'a> {
+            owner: &'a String,
+
+            #[covariant]
+            dependent: Ast,
+        }
+    );
+
+    self_cell!(
+        struct ParentCell {
+            owner: String,
+
+            #[covariant]
+            dependent: ChildCell,
+        }
+    );
+
+    let parent_owner_expected = String::from("some string it is");
+    let ast_expected = Ast::from(&parent_owner_expected);
+
+    let parent_cell = ParentCell::new(parent_owner_expected.clone(), |parent| {
+        ChildCell::new(parent, |child| Ast::from(*child))
+    });
+
+    assert_eq!(parent_cell.borrow_owner(), &parent_owner_expected);
+
+    let child_cell = parent_cell.borrow_dependent();
+    assert_eq!(*child_cell.borrow_owner(), &parent_owner_expected);
+    assert_eq!(child_cell.borrow_dependent(), &ast_expected);
+}
+
+// partial nested cells
+
+#[test]
 fn panic_in_from_owner() {
     // panicing in user provided code shouldn't leak memory.
 

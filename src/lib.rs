@@ -140,75 +140,6 @@ pub extern crate alloc;
 #[doc(hidden)]
 pub mod unsafe_self_cell;
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _covariant_access {
-    (covariant, $Vis:vis, $Dependent:ident) => {
-        $Vis fn borrow_dependent<'a>(&'a self) -> &'a $Dependent<'a> {
-            fn _assert_covariance<'x: 'y, 'y>(x: $Dependent<'x>) -> $Dependent<'y> {
-                //  This function only compiles for covariant types.
-                x // Change the macro invocation to not_covariant.
-            }
-
-            unsafe { self.unsafe_self_cell.borrow_dependent() }
-        }
-    };
-    (not_covariant, $Vis:vis, $Dependent:ident) => {
-        // For types that are not covariant it's unsafe to allow
-        // returning direct references.
-        // For example a lifetime that is too short could be chosen:
-        // See https://github.com/Voultapher/self_cell/issues/5
-    };
-    ($x:ident, $Vis:vis, $Dependent:ident) => {
-        compile_error!("This macro only accepts `covariant` or `not_covariant`");
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _impl_automatic_derive {
-    (Debug, $StructName:ident) => {
-        impl core::fmt::Debug for $StructName {
-            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
-                self.with_dependent(|owner, dependent| {
-                    write!(
-                        fmt,
-                        concat!(
-                            stringify!($StructName),
-                            " {{ owner: {:?}, dependent: {:?} }}"
-                        ),
-                        owner, dependent
-                    )
-                })
-            }
-        }
-    };
-    (PartialEq, $StructName:ident) => {
-        impl PartialEq for $StructName {
-            fn eq(&self, other: &Self) -> bool {
-                *self.borrow_owner() == *other.borrow_owner()
-            }
-        }
-    };
-    (Eq, $StructName:ident) => {
-        // TODO this should only be allowed if owner is Eq.
-        impl Eq for $StructName {}
-    };
-    (Hash, $StructName:ident) => {
-        impl core::hash::Hash for $StructName {
-            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-                self.borrow_owner().hash(state);
-            }
-        }
-    };
-    ($x:ident, $StructName:ident) => {
-        compile_error!(concat!(
-            "No automatic trait impl for trait: ",
-            stringify!($x)
-        ));
-    };
-}
-
 /// This macro declares a new struct of `$StructName` and implements traits
 /// based on `$AutomaticDerive`.
 ///
@@ -355,11 +286,18 @@ macro_rules! _impl_automatic_derive {
 ///   internals is only possible via unsafe functions, so you can't accidentally
 ///   use them in safe code.
 ///
+///   There is limited nested cell support. Eg, having an owner with non static
+///   references. Eg `struct ChildCell<'a> { owner: &'a String, ...`. You can
+///   use any lifetime name you want, except `_q` and only a single lifetime is
+///   supported, and can only be used in the owner. Due to macro_rules
+///   limitations, no `AutomaticDerive` are supported if an owner lifetime is
+///   provided.
+///
 #[macro_export]
 macro_rules! self_cell {
 (
     $(#[$StructMeta:meta])*
-    $Vis:vis struct $StructName:ident {
+    $Vis:vis struct $StructName:ident $(<$OwnerLifetime:lifetime>)? {
         owner: $Owner:ty,
 
         #[$Covariance:ident]
@@ -370,17 +308,17 @@ macro_rules! self_cell {
 ) => {
     #[repr(transparent)]
     $(#[$StructMeta])*
-    $Vis struct $StructName {
+    $Vis struct $StructName $(<$OwnerLifetime>)* {
         unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
             $Owner,
             $Dependent<'static>
         >
     }
 
-    impl $StructName {
+    impl $(<$OwnerLifetime>)* $StructName $(<$OwnerLifetime>)* {
         $Vis fn new(
             owner: $Owner,
-            dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> $Dependent<'a>
+            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> $Dependent<'_q>
         ) -> Self {
             use core::ptr::NonNull;
 
@@ -388,16 +326,17 @@ macro_rules! self_cell {
                 // All this has to happen here, because there is not good way
                 // of passing the appropriate logic into UnsafeSelfCell::new
                 // short of assuming Dependent<'static> is the same as
-                // Dependent<'a>, which I'm not confident is safe.
+                // Dependent<'_q>, which I'm not confident is safe.
 
                 // For this API to be safe there has to be no safe way to
                 // capture additional references in `dependent_builder` and then
                 // return them as part of Dependent. Eg. it should be impossible
-                // to express: 'a should outlive 'x here `fn
-                // bad<'a>(outside_ref: &'a String) -> impl for<'x> FnOnce(&'x
+                // to express: '_q should outlive 'x here `fn
+                // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> FnOnce(&'x
                 // Owner) -> Dependent<'x>`.
 
-                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
+                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                    $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
                 assert!(layout.size() != 0);
@@ -432,14 +371,15 @@ macro_rules! self_cell {
 
         $Vis fn try_new<Err>(
             owner: $Owner,
-            dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> Result<$Dependent<'_q>, Err>
         ) -> Result<Self, Err> {
             use core::ptr::NonNull;
 
             unsafe {
                 // See fn new for more explanation.
 
-                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
+                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                    $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
                 assert!(layout.size() != 0);
@@ -478,14 +418,15 @@ macro_rules! self_cell {
 
         $Vis fn try_new_or_recover<Err>(
             owner: $Owner,
-            dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> Result<$Dependent<'_q>, Err>
         ) -> Result<Self, ($Owner, Err)> {
             use core::ptr::NonNull;
 
             unsafe {
                 // See fn new for more explanation.
 
-                type JoinedCell<'a> = $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'a>>;
+                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                    $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
                 assert!(layout.size() != 0);
@@ -531,11 +472,11 @@ macro_rules! self_cell {
             }
         }
 
-        $Vis fn borrow_owner<'a>(&'a self) -> &'a $Owner {
-            unsafe { self.unsafe_self_cell.borrow_owner::<$Dependent<'a>>() }
+        $Vis fn borrow_owner<'_q>(&'_q self) -> &'_q $Owner {
+            unsafe { self.unsafe_self_cell.borrow_owner::<$Dependent<'_q>>() }
         }
 
-        $Vis fn with_dependent<Ret>(&self, func: impl for<'a> FnOnce(&'a $Owner, &'a $Dependent<'a>) -> Ret) -> Ret {
+        $Vis fn with_dependent<Ret>(&self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q $Dependent<'_q>) -> Ret) -> Ret {
             unsafe {
                 func(
                     self.unsafe_self_cell.borrow_owner::<$Dependent>(),
@@ -544,7 +485,7 @@ macro_rules! self_cell {
             }
         }
 
-        $Vis fn with_dependent_mut<Ret>(&mut self, func: impl for<'a> FnOnce(&'a $Owner, &'a mut $Dependent<'a>) -> Ret) -> Ret {
+        $Vis fn with_dependent_mut<Ret>(&mut self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q mut $Dependent<'_q>) -> Ret) -> Ret {
             let joined_cell = unsafe {
                     self.unsafe_self_cell.borrow_mut()
             };
@@ -570,8 +511,8 @@ macro_rules! self_cell {
         }
     }
 
-    impl Drop for $StructName {
-        fn drop<'a>(&mut self) {
+    impl $(<$OwnerLifetime>)* Drop for $StructName $(<$OwnerLifetime>)* {
+        fn drop(&mut self) {
             unsafe {
                 self.unsafe_self_cell.drop_joined::<$Dependent>();
             }
@@ -584,4 +525,73 @@ macro_rules! self_cell {
         $crate::_impl_automatic_derive!($AutomaticDerive, $StructName);
     )*)*
 };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _covariant_access {
+    (covariant, $Vis:vis, $Dependent:ident) => {
+        $Vis fn borrow_dependent<'_q>(&'_q self) -> &'_q $Dependent<'_q> {
+            fn _assert_covariance<'x: 'y, 'y>(x: $Dependent<'x>) -> $Dependent<'y> {
+                //  This function only compiles for covariant types.
+                x // Change the macro invocation to not_covariant.
+            }
+
+            unsafe { self.unsafe_self_cell.borrow_dependent() }
+        }
+    };
+    (not_covariant, $Vis:vis, $Dependent:ident) => {
+        // For types that are not covariant it's unsafe to allow
+        // returning direct references.
+        // For example a lifetime that is too short could be chosen:
+        // See https://github.com/Voultapher/self_cell/issues/5
+    };
+    ($x:ident, $Vis:vis, $Dependent:ident) => {
+        compile_error!("This macro only accepts `covariant` or `not_covariant`");
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _impl_automatic_derive {
+    (Debug, $StructName:ident) => {
+        impl core::fmt::Debug for $StructName {
+            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+                self.with_dependent(|owner, dependent| {
+                    write!(
+                        fmt,
+                        concat!(
+                            stringify!($StructName),
+                            " {{ owner: {:?}, dependent: {:?} }}"
+                        ),
+                        owner, dependent
+                    )
+                })
+            }
+        }
+    };
+    (PartialEq, $StructName:ident) => {
+        impl PartialEq for $StructName {
+            fn eq(&self, other: &Self) -> bool {
+                *self.borrow_owner() == *other.borrow_owner()
+            }
+        }
+    };
+    (Eq, $StructName:ident) => {
+        // TODO this should only be allowed if owner is Eq.
+        impl Eq for $StructName {}
+    };
+    (Hash, $StructName:ident) => {
+        impl core::hash::Hash for $StructName {
+            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+                self.borrow_owner().hash(state);
+            }
+        }
+    };
+    ($x:ident, $StructName:ident) => {
+        compile_error!(concat!(
+            "No automatic trait impl for trait: ",
+            stringify!($x)
+        ));
+    };
 }

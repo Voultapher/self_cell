@@ -27,7 +27,7 @@ pub struct JoinedCell<Owner, Dependent> {
 // Library controlled struct that marks all accesses as unsafe.
 // Because the macro generated struct impl can be extended, could be unsafe.
 #[doc(hidden)]
-pub struct UnsafeSelfCell<Owner: 'static, DependentStatic: 'static> {
+pub struct UnsafeSelfCell<Owner, DependentStatic: 'static> {
     joined_void_ptr: NonNull<u8>,
 
     owner_marker: PhantomData<Owner>,
