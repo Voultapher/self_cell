@@ -545,6 +545,26 @@ fn panic_in_from_owner() {
 }
 
 #[test]
+fn result_name_hygiene() {
+    // See https://github.com/Voultapher/self_cell/issues/16
+    #[allow(dead_code)]
+    type Result<T> = std::result::Result<T, ()>;
+
+    type VecRef<'a> = &'a Vec<u8>;
+
+    self_cell!(
+        struct SomeCell {
+            owner: Vec<u8>,
+
+            #[covariant]
+            dependent: VecRef,
+        }
+
+        impl {Debug, PartialEq, Eq, Hash}
+    );
+}
+
+#[test]
 fn share_across_threads() {
     // drop_joined takes &mut self, so that's not a thread concern anyway.
     // And get_or_init_dependent should be as thread compatible as OnceCell.

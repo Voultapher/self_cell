@@ -371,8 +371,9 @@ macro_rules! self_cell {
 
         $Vis fn try_new<Err>(
             owner: $Owner,
-            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> Result<$Dependent<'_q>, Err>
-        ) -> Result<Self, Err> {
+            dependent_builder:
+                impl for<'_q> FnOnce(&'_q $Owner) -> core::result::Result<$Dependent<'_q>, Err>
+        ) -> core::result::Result<Self, Err> {
             use core::ptr::NonNull;
 
             unsafe {
@@ -418,8 +419,9 @@ macro_rules! self_cell {
 
         $Vis fn try_new_or_recover<Err>(
             owner: $Owner,
-            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> Result<$Dependent<'_q>, Err>
-        ) -> Result<Self, ($Owner, Err)> {
+            dependent_builder:
+                impl for<'_q> FnOnce(&'_q $Owner) -> core::result::Result<$Dependent<'_q>, Err>
+        ) -> core::result::Result<Self, ($Owner, Err)> {
             use core::ptr::NonNull;
 
             unsafe {
@@ -556,7 +558,10 @@ macro_rules! _covariant_access {
 macro_rules! _impl_automatic_derive {
     (Debug, $StructName:ident) => {
         impl core::fmt::Debug for $StructName {
-            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+            fn fmt(
+                &self,
+                fmt: &mut core::fmt::Formatter,
+            ) -> core::result::Result<(), core::fmt::Error> {
                 self.with_dependent(|owner, dependent| {
                     write!(
                         fmt,
@@ -571,7 +576,7 @@ macro_rules! _impl_automatic_derive {
         }
     };
     (PartialEq, $StructName:ident) => {
-        impl PartialEq for $StructName {
+        impl core::cmp::PartialEq for $StructName {
             fn eq(&self, other: &Self) -> bool {
                 *self.borrow_owner() == *other.borrow_owner()
             }
@@ -579,7 +584,7 @@ macro_rules! _impl_automatic_derive {
     };
     (Eq, $StructName:ident) => {
         // TODO this should only be allowed if owner is Eq.
-        impl Eq for $StructName {}
+        impl core::cmp::Eq for $StructName {}
     };
     (Hash, $StructName:ident) => {
         impl core::hash::Hash for $StructName {
