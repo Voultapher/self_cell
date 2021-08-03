@@ -2,11 +2,10 @@
 [<img alt="crates.io" src="https://img.shields.io/badge/dynamic/json?color=fc8d62&label=crates.io&query=%24.crate.max_version&url=https%3A%2F%2Fcrates.io%2Fapi%2Fv1%2Fcrates%2Fself_cell&style=for-the-badge&logo=rust" height="20">](https://crates.io/crates/self_cell)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-self__cell-66c2a5?style=for-the-badge&logoColor=white&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDUxMiA1MTIiPjxwYXRoIGZpbGw9IiNmNWY1ZjUiIGQ9Ik00ODguNiAyNTAuMkwzOTIgMjE0VjEwNS41YzAtMTUtOS4zLTI4LjQtMjMuNC0zMy43bC0xMDAtMzcuNWMtOC4xLTMuMS0xNy4xLTMuMS0yNS4zIDBsLTEwMCAzNy41Yy0xNC4xIDUuMy0yMy40IDE4LjctMjMuNCAzMy43VjIxNGwtOTYuNiAzNi4yQzkuMyAyNTUuNSAwIDI2OC45IDAgMjgzLjlWMzk0YzAgMTMuNiA3LjcgMjYuMSAxOS45IDMyLjJsMTAwIDUwYzEwLjEgNS4xIDIyLjEgNS4xIDMyLjIgMGwxMDMuOS01MiAxMDMuOSA1MmMxMC4xIDUuMSAyMi4xIDUuMSAzMi4yIDBsMTAwLTUwYzEyLjItNi4xIDE5LjktMTguNiAxOS45LTMyLjJWMjgzLjljMC0xNS05LjMtMjguNC0yMy40LTMzLjd6TTM1OCAyMTQuOGwtODUgMzEuOXYtNjguMmw4NS0zN3Y3My4zek0xNTQgMTA0LjFsMTAyLTM4LjIgMTAyIDM4LjJ2LjZsLTEwMiA0MS40LTEwMi00MS40di0uNnptODQgMjkxLjFsLTg1IDQyLjV2LTc5LjFsODUtMzguOHY3NS40em0wLTExMmwtMTAyIDQxLjQtMTAyLTQxLjR2LS42bDEwMi0zOC4yIDEwMiAzOC4ydi42em0yNDAgMTEybC04NSA0Mi41di03OS4xbDg1LTM4Ljh2NzUuNHptMC0xMTJsLTEwMiA0MS40LTEwMi00MS40di0uNmwxMDItMzguMiAxMDIgMzguMnYuNnoiPjwvcGF0aD48L3N2Zz4K" height="20">](https://docs.rs/self_cell)
 
-# `self_cell`
+# `self_cell!`
 
-`self_cell` provides a macro-rules macro: `self_cell`. With this macro you can
-create self-referential structs that are safe-to-use in stable Rust, without
-leaking the struct internal lifetime.
+Use the macro-rules macro: `self_cell!` to create safe-to-use self-referential
+structs in stable Rust, without leaking the struct internal lifetime.
 
 In a nutshell, the API looks *roughly* like this:
 
@@ -56,8 +55,8 @@ from experienced Rust users.
 ```
 $ rm -rf target && cargo +nightly build -Z timings
 
-Compiling self_cell v0.7.0
-Completed self_cell v0.7.0 in 0.2s
+Compiling self_cell v0.9.0
+Completed self_cell v0.9.0 in 0.2s
 ```
 
 Because it does **not** use proc-macros, and has 0 dependencies compile-times
