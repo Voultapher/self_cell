@@ -3,9 +3,12 @@
 #![deny(private_in_public)]
 
 use std::fmt::Debug;
+use std::fs;
 use std::marker::PhantomData;
 use std::panic::catch_unwind;
+use std::process::Command;
 use std::rc::Rc;
+use std::str;
 
 use crossbeam_utils::thread;
 
@@ -657,4 +660,38 @@ fn cell_mem_size() {
 fn invalid_compile() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/invalid/*.rs");
+}
+
+// Hacky custom version of try_build to support partial diffing.
+fn try_build_manual(path: &str) {
+    let output = Command::new("cargo")
+        .arg("check")
+        .arg("--color=never")
+        .current_dir(path)
+        .output()
+        .unwrap();
+
+    let compile_err = str::from_utf8(&output.stderr).unwrap();
+
+    let expected_err = fs::read_to_string(format!("{}/expected.stderr", path))
+        .unwrap()
+        .replace("IGNORE", "");
+
+    // Very naive approach.
+    for expected_line in expected_err.split("\n").map(str::trim) {
+        if !compile_err.contains(expected_line) {
+            eprintln!(
+                "Expected: '{}'\nIn, but got: '{}'",
+                expected_line, compile_err
+            );
+            panic!();
+        }
+    }
+}
+
+#[test]
+// Not supported by miri isolation.
+#[cfg_attr(miri, ignore)]
+fn invalid_compile_manual() {
+    try_build_manual("tests/invalid_manual/wrong_covariance");
 }

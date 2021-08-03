@@ -1,0 +1,4 @@
+[workspace]
+members = [
+    "wrong_covariance",
+]
