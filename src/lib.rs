@@ -310,6 +310,7 @@ macro_rules! self_cell {
     $(#[$StructMeta])*
     $Vis struct $StructName $(<$OwnerLifetime>)* {
         unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
+            $StructName$(<$OwnerLifetime>)?,
             $Owner,
             $Dependent<'static>
         >,
@@ -509,6 +510,7 @@ macro_rules! self_cell {
             let unsafe_self_cell = unsafe { core::mem::transmute::<
                 Self,
                 $crate::unsafe_self_cell::UnsafeSelfCell<
+                    $StructName$(<$OwnerLifetime>)?,
                     $Owner,
                     $Dependent<'static>
                 >
