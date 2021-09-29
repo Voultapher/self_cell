@@ -1,0 +1,14 @@
+error[E0308]: mismatched types
+  --> $DIR/contravariant_owner.rs:19:27
+   |
+19 |     let x: Foo<'static> = x; // coerce using variance
+   |                           ^ lifetime mismatch
+   |
+   = note: expected struct `Foo<'static>`
+              found struct `Foo<'a>`
+note: the lifetime `'a` as defined on the function body at 14:23...
+  --> $DIR/contravariant_owner.rs:14:23
+   |
+14 | fn transmute_lifetime<'a, 'b>(x: &'a str) -> &'b str {
+   |                       ^^
+   = note: ...does not necessarily outlive the static lifetime

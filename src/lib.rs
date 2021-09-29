@@ -312,7 +312,11 @@ macro_rules! self_cell {
         unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
             $Owner,
             $Dependent<'static>
-        >
+        >,
+
+        // marker to ensure that contravariant owners don't imply covariance
+        // over the dependent. See issue #18
+        owner_marker: core::marker::PhantomData<$(&$OwnerLifetime)* ()>,
     }
 
     impl $(<$OwnerLifetime>)* $StructName $(<$OwnerLifetime>)* {
@@ -365,6 +369,7 @@ macro_rules! self_cell {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                         joined_void_ptr,
                     ),
+                    owner_marker: core::marker::PhantomData,
                 }
             }
         }
@@ -410,6 +415,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
+                            owner_marker: core::marker::PhantomData,
                         })
                     }
                     Err(err) => Err(err)
@@ -458,6 +464,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
+                            owner_marker: core::marker::PhantomData,
                         })
                     }
                     Err(err) => {

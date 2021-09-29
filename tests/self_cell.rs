@@ -680,10 +680,7 @@ fn try_build_manual(path: &str) {
     // Very naive approach.
     for expected_line in expected_err.split("\n").map(str::trim) {
         if !compile_err.contains(expected_line) {
-            eprintln!(
-                "Expected: '{}'\nIn, but got: '{}'",
-                expected_line, compile_err
-            );
+            eprintln!("Expected: '{}'\n\nIN\n\n{}", expected_line, compile_err);
             panic!();
         }
     }
