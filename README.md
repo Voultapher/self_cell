@@ -28,7 +28,10 @@ self_cell!(
 struct NewStructName(...);
 
 impl NewStructName {
-    fn new(owner: Owner) -> NewStructName { ... }
+    fn new(
+        owner: Owner,
+        dependent_builder: impl for<'a> FnOnce(&'a Owner) -> Dependent<'a>
+    ) -> NewStructName { ... }
     fn borrow_owner<'a>(&'a self) -> &'a Owner { ... }
     fn borrow_dependent<'a>(&'a self) -> &'a Dependent<'a> { ... }
 }
