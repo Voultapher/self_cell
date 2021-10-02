@@ -1,0 +1,8 @@
+error[E0308]: mismatched types
+  --> $DIR/swap_cell_member.rs:28:50
+   |
+28 |         std::mem::swap(&mut x1.unsafe_self_cell, &mut x2.unsafe_self_cell);
+   |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^ expected struct `Struct1`, found struct `Struct2`
+   |
+   = note: expected mutable reference `&mut UnsafeSelfCell<Struct1, String, (&'static str, &'static str)>`
+              found mutable reference `&mut UnsafeSelfCell<Struct2, String, (&'static str, &'static str)>`

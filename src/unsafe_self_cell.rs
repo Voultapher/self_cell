@@ -27,18 +27,24 @@ pub struct JoinedCell<Owner, Dependent> {
 // Library controlled struct that marks all accesses as unsafe.
 // Because the macro generated struct impl can be extended, could be unsafe.
 #[doc(hidden)]
-pub struct UnsafeSelfCell<Owner, DependentStatic: 'static> {
+pub struct UnsafeSelfCell<ContainedIn, Owner, DependentStatic: 'static> {
     joined_void_ptr: NonNull<u8>,
+
+    // ContainedIn is necessary for type safety since we don't fully
+    // prohibit access to the UnsafeSelfCell; swapping between different
+    // structs can be unsafe otherwise, see Issue #17.
+    contained_in_marker: PhantomData<ContainedIn>,
 
     owner_marker: PhantomData<Owner>,
     // DependentStatic is only used to correctly derive Send and Sync.
     dependent_marker: PhantomData<DependentStatic>,
 }
 
-impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
+impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, DependentStatic> {
     pub unsafe fn new(joined_void_ptr: NonNull<u8>) -> Self {
         Self {
             joined_void_ptr,
+            contained_in_marker: PhantomData,
             owner_marker: PhantomData,
             dependent_marker: PhantomData,
         }
@@ -96,7 +102,8 @@ impl<Owner, DependentStatic> UnsafeSelfCell<Owner, DependentStatic> {
     }
 }
 
-unsafe impl<Owner, DependentStatic> Send for UnsafeSelfCell<Owner, DependentStatic>
+unsafe impl<ContainedIn, Owner, DependentStatic> Send
+    for UnsafeSelfCell<ContainedIn, Owner, DependentStatic>
 where
     // Only derive Send if Owner and DependentStatic is also Send
     Owner: Send,
@@ -104,7 +111,8 @@ where
 {
 }
 
-unsafe impl<Owner, DependentStatic> Sync for UnsafeSelfCell<Owner, DependentStatic>
+unsafe impl<ContainedIn, Owner, DependentStatic> Sync
+    for UnsafeSelfCell<ContainedIn, Owner, DependentStatic>
 where
     // Only derive Sync if Owner and DependentStatic is also Sync
     Owner: Sync,
