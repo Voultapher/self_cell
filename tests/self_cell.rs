@@ -568,6 +568,29 @@ fn result_name_hygiene() {
 }
 
 #[test]
+fn debug_impl() {
+    // See https://github.com/Voultapher/self_cell/pull/22
+    let ast_cell = PackedAstCell::new("xyz, abv".into(), |owner| owner.into());
+
+    assert_eq!(
+        format!("{:?}", &ast_cell),
+        "PackedAstCell { owner: \"xyz, abv\", dependent: Ast([\"z, \", \"yz\"]) }"
+    );
+
+    let hash_fmt = r#"PackedAstCell {
+    owner: "xyz, abv",
+    dependent: Ast(
+        [
+            "z, ",
+            "yz",
+        ],
+    ),
+}"#;
+
+    assert_eq!(format!("{:#?}", ast_cell), hash_fmt);
+}
+
+#[test]
 fn share_across_threads() {
     // drop_joined takes &mut self, so that's not a thread concern anyway.
     // And get_or_init_dependent should be as thread compatible as OnceCell.
