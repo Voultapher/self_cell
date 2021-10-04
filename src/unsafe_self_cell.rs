@@ -76,7 +76,11 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        drop_in_place(joined_ptr.as_ptr());
+        // IMPORTANT dependent must be dropped before owner.
+        // We don't want to rely on an implicit order of struct fields.
+        // So we drop the struct, field by field manually.
+        drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
+        drop_in_place(&mut (*joined_ptr.as_ptr()).owner);
 
         let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
 
