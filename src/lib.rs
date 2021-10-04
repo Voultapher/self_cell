@@ -355,8 +355,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = &mut (*joined_ptr.as_ptr()).owner;
-                let dependent_ptr: *mut $Dependent = &mut (*joined_ptr.as_ptr()).dependent;
+                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
+                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -400,8 +400,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = &mut (*joined_ptr.as_ptr()).owner;
-                let dependent_ptr: *mut $Dependent = &mut (*joined_ptr.as_ptr()).dependent;
+                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
+                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -449,8 +449,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = &mut (*joined_ptr.as_ptr()).owner;
-                let dependent_ptr: *mut $Dependent = &mut (*joined_ptr.as_ptr()).dependent;
+                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
+                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -499,11 +499,11 @@ macro_rules! self_cell {
         }
 
         $Vis fn with_dependent_mut<Ret>(&mut self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q mut $Dependent<'_q>) -> Ret) -> Ret {
-            let joined_cell = unsafe {
+            let (owner, dependent) = unsafe {
                     self.unsafe_self_cell.borrow_mut()
             };
 
-            func(&joined_cell.owner, &mut joined_cell.dependent)
+            func(owner, dependent)
         }
 
         $crate::_covariant_access!($Covariance, $Vis, $Dependent);
