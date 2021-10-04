@@ -53,7 +53,7 @@
 //!
 //! ### Fast compile times
 //!
-//! ```ignore
+//! ```txt
 //! $ rm -rf target && cargo +nightly build -Z timings
 //!
 //! Compiling self_cell v0.7.0
