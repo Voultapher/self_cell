@@ -575,14 +575,10 @@ macro_rules! _impl_automatic_derive {
                 fmt: &mut core::fmt::Formatter,
             ) -> core::result::Result<(), core::fmt::Error> {
                 self.with_dependent(|owner, dependent| {
-                    write!(
-                        fmt,
-                        concat!(
-                            stringify!($StructName),
-                            " {{ owner: {:?}, dependent: {:?} }}"
-                        ),
-                        owner, dependent
-                    )
+                    fmt.debug_struct(stringify!($StructName))
+                        .field("owner", owner)
+                        .field("dependent", dependent)
+                        .finish()
                 })
             }
         }
