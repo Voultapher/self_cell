@@ -2,6 +2,7 @@
 
 #![deny(private_in_public)]
 
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::fs;
 use std::marker::PhantomData;
@@ -360,6 +361,44 @@ fn custom_drop() {
     let expected_dependent = Ref::<'_, OV>(&None);
 
     assert_eq!(cell.borrow_dependent(), &expected_dependent);
+}
+
+#[test]
+fn drop_order() {
+    #[derive(Debug, PartialEq, Eq)]
+    enum Dropped {
+        Owner,
+        Dependent,
+    }
+
+    struct Owner(Rc<RefCell<Vec<Dropped>>>);
+    struct Dependent<'a>(&'a Owner, Rc<RefCell<Vec<Dropped>>>);
+
+    impl Drop for Owner {
+        fn drop(&mut self) {
+            self.0.borrow_mut().push(Dropped::Owner)
+        }
+    }
+
+    impl Drop for Dependent<'_> {
+        fn drop(&mut self) {
+            self.1.borrow_mut().push(Dropped::Dependent)
+        }
+    }
+
+    self_cell! {
+        struct Foo {
+            owner: Owner,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+    }
+
+    let drops: Rc<RefCell<Vec<Dropped>>> = <_>::default();
+    let foo = Foo::new(Owner(drops.clone()), |o| Dependent(o, drops.clone()));
+    drop(foo);
+    assert_eq!(&drops.borrow()[..], &[Dropped::Dependent, Dropped::Owner]);
 }
 
 #[test]
