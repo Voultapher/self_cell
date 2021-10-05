@@ -403,7 +403,7 @@ fn drop_order() {
 }
 
 #[test]
-fn into_owner_drop_dependent_panic() {
+fn into_owner_drop_dependent_without_panic() {
     // This test resulted in a double-free in a previous version of self-cell
     type O = Cell<Option<Box<u8>>>;
 
@@ -426,6 +426,81 @@ fn into_owner_drop_dependent_panic() {
 
     let s = S::new(Cell::new(Some(Box::new(42))), |o| D(o));
     assert!(s.into_owner().into_inner().is_none());
+}
+
+#[test]
+#[should_panic] // but should not leak or double-free
+fn into_owner_drop_dependent_with_panic() {
+    type O = Cell<Option<Box<u8>>>;
+
+    self_cell! {
+        struct S {
+            owner: O,
+
+            #[covariant]
+            dependent: D,
+        }
+    }
+
+    struct D<'a>(&'a O);
+
+    impl Drop for D<'_> {
+        fn drop(&mut self) {
+            self.0.take();
+            panic!();
+        }
+    }
+
+    let s = S::new(Cell::new(Some(Box::new(42))), |o| D(o));
+    s.into_owner();
+}
+
+#[test]
+#[should_panic] // but should not leak
+fn drop_panic_owner() {
+    struct O;
+    type D<'a> = &'a O;
+
+    self_cell! {
+        struct S {
+            owner: O,
+
+            #[covariant]
+            dependent: D,
+        }
+    }
+
+    impl Drop for O {
+        fn drop(&mut self) {
+            panic!()
+        }
+    }
+
+    let _s = S::new(O, |o| o);
+}
+
+#[test]
+#[should_panic] // but should not leak
+fn drop_panic_dependent() {
+    struct O;
+    struct D<'a>(&'a O);
+
+    self_cell! {
+        struct S {
+            owner: O,
+
+            #[covariant]
+            dependent: D,
+        }
+    }
+
+    impl Drop for D<'_> {
+        fn drop(&mut self) {
+            panic!()
+        }
+    }
+
+    let _s = S::new(O, |o| D(o));
 }
 
 #[test]

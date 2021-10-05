@@ -362,7 +362,7 @@ macro_rules! self_cell {
                 owner_ptr.write(owner);
 
                 // Drop guard that cleans up should building the dependent panic.
-                let mut drop_guard =
+                let drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
                 // Initialize dependent with owner reference in final place.
