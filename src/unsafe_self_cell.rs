@@ -64,11 +64,17 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
         &(*joined_ptr.as_ptr()).dependent
     }
 
-    pub unsafe fn borrow_mut<'a, Dependent>(&'a mut self) -> &'a mut JoinedCell<Owner, Dependent> {
+    pub unsafe fn borrow_mut<'a, Dependent>(&'a mut self) -> (&'a Owner, &'a mut Dependent) {
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        &mut (*joined_ptr.as_ptr())
+        // This function used to return `&'a mut JoinedCell<Owner, Dependent>`.
+        // It now creates two references to the fields instead to avoid claiming mutable access
+        // to the whole `JoinedCell` (including the owner!) here.
+        (
+            &(*joined_ptr.as_ptr()).owner,
+            &mut (*joined_ptr.as_ptr()).dependent,
+        )
     }
 
     // Any subsequent use of this struct other than dropping it is UB.
@@ -76,7 +82,11 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
-        drop_in_place(joined_ptr.as_ptr());
+        // IMPORTANT dependent must be dropped before owner.
+        // We don't want to rely on an implicit order of struct fields.
+        // So we drop the struct, field by field manually.
+        drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
+        drop_in_place(&mut (*joined_ptr.as_ptr()).owner);
 
         let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
 
