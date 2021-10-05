@@ -388,7 +388,7 @@ fn drop_order() {
     }
 
     self_cell! {
-        struct Foo {
+        struct DropOrder {
             owner: Owner,
 
             #[covariant]
@@ -397,8 +397,8 @@ fn drop_order() {
     }
 
     let drops: Rc<RefCell<Vec<Dropped>>> = <_>::default();
-    let foo = Foo::new(Owner(drops.clone()), |o| Dependent(o, drops.clone()));
-    drop(foo);
+    let cell = DropOrder::new(Owner(drops.clone()), |o| Dependent(o, drops.clone()));
+    drop(cell);
     assert_eq!(&drops.borrow()[..], &[Dropped::Dependent, Dropped::Owner]);
 }
 
@@ -456,51 +456,66 @@ fn into_owner_drop_dependent_with_panic() {
 }
 
 #[test]
-#[should_panic] // but should not leak
 fn drop_panic_owner() {
-    struct O;
-    type D<'a> = &'a O;
+    #[derive(Clone, Debug, PartialEq)]
+    struct Owner(String);
+
+    type Dependent<'a> = &'a Owner;
 
     self_cell! {
-        struct S {
-            owner: O,
+        struct DropPanicOwner {
+            owner: Owner,
 
             #[covariant]
-            dependent: D,
+            dependent: Dependent,
         }
     }
 
-    impl Drop for O {
+    impl Drop for Owner {
         fn drop(&mut self) {
             panic!()
         }
     }
 
-    let _s = S::new(O, |o| o);
+    let owner = Owner("s t e f f a h n <3 and some padding against sbo".into());
+
+    let cell = DropPanicOwner::new(owner.clone(), |o| o);
+    assert_eq!(cell.borrow_owner(), &owner);
+    assert_eq!(cell.borrow_dependent(), &&owner);
+
+    assert!(std::panic::catch_unwind(move || drop(cell)).is_err());
+    assert!(std::panic::catch_unwind(move || drop(owner)).is_err());
 }
 
 #[test]
-#[should_panic] // but should not leak
 fn drop_panic_dependent() {
-    struct O;
-    struct D<'a>(&'a O);
+    #[derive(Clone, Debug, PartialEq)]
+    struct Owner(String);
+
+    struct Dependent<'a>(&'a Owner);
 
     self_cell! {
-        struct S {
-            owner: O,
+        struct DropPanicDependent {
+            owner: Owner,
 
             #[covariant]
-            dependent: D,
+            dependent: Dependent,
         }
     }
 
-    impl Drop for D<'_> {
+    impl Drop for Dependent<'_> {
         fn drop(&mut self) {
             panic!()
         }
     }
 
-    let _s = S::new(O, |o| D(o));
+    let owner = Owner("s t e f f a h n <3".into());
+
+    let cell = DropPanicDependent::new(owner.clone(), |o| Dependent(o));
+    assert_eq!(cell.borrow_owner(), &owner);
+    assert_eq!(cell.borrow_dependent().0, &owner);
+
+    assert!(std::panic::catch_unwind(move || drop(cell)).is_err());
 }
 
 #[test]
