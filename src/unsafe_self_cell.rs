@@ -97,14 +97,16 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
+        // Drop dependent
+        drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
+
         let owner_ptr: *const Owner = &(*joined_ptr.as_ptr()).owner;
 
         // Move owner out so it can be returned.
+        // Must not read before dropping dependent!! (Which happened above.)
         let owner = read(owner_ptr);
 
-        // Clean up rest of JoinedCell
-        drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
-
+        // Deallocate JoinedCell
         let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
         dealloc(self.joined_void_ptr.as_ptr(), layout);
 

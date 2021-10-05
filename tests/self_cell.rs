@@ -2,6 +2,7 @@
 
 #![deny(private_in_public)]
 
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::fs;
@@ -399,6 +400,32 @@ fn drop_order() {
     let foo = Foo::new(Owner(drops.clone()), |o| Dependent(o, drops.clone()));
     drop(foo);
     assert_eq!(&drops.borrow()[..], &[Dropped::Dependent, Dropped::Owner]);
+}
+
+#[test]
+fn into_owner_drop_dependent_panic() {
+    // This test resulted in a double-free in a previous version of self-cell
+    type O = Cell<Option<Box<u8>>>;
+
+    self_cell! {
+        struct S {
+            owner: O,
+
+            #[covariant]
+            dependent: D,
+        }
+    }
+
+    struct D<'a>(&'a O);
+
+    impl Drop for D<'_> {
+        fn drop(&mut self) {
+            self.0.take();
+        }
+    }
+
+    let s = S::new(Cell::new(Some(Box::new(42))), |o| D(o));
+    assert!(s.into_owner().into_inner().is_none());
 }
 
 #[test]
