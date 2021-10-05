@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-use core::mem::transmute;
+use core::mem::{self, transmute};
 use core::ptr::{drop_in_place, read, NonNull};
 
 extern crate alloc;
@@ -82,23 +82,30 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
+        // Also used in case drop_in_place(...dependent) fails
+        let _guard = OwnerAndCellDropGuard { joined_ptr };
+
         // IMPORTANT dependent must be dropped before owner.
         // We don't want to rely on an implicit order of struct fields.
         // So we drop the struct, field by field manually.
         drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
-        drop_in_place(&mut (*joined_ptr.as_ptr()).owner);
 
-        let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
-
-        dealloc(self.joined_void_ptr.as_ptr(), layout);
+        // Dropping owner
+        // and deallocating
+        // due to _guard at end of scope.
     }
 
     pub unsafe fn into_owner<Dependent>(self) -> Owner {
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
 
+        // In case drop_in_place(...dependent) fails
+        let drop_guard = OwnerAndCellDropGuard::new(joined_ptr);
+
         // Drop dependent
         drop_in_place(&mut (*joined_ptr.as_ptr()).dependent);
+
+        mem::forget(drop_guard);
 
         let owner_ptr: *const Owner = &(*joined_ptr.as_ptr()).owner;
 
@@ -149,16 +156,31 @@ impl<Owner, Dependent> OwnerAndCellDropGuard<Owner, Dependent> {
 
 impl<Owner, Dependent> Drop for OwnerAndCellDropGuard<Owner, Dependent> {
     fn drop(&mut self) {
+        struct DeallocGuard {
+            ptr: *mut u8,
+            layout: Layout,
+        }
+        impl Drop for DeallocGuard {
+            fn drop(&mut self) {
+                unsafe { dealloc(self.ptr, self.layout) }
+            }
+        }
+
+        // Deallocate even when the drop_in_place(...owner) panics
+        let _guard = DeallocGuard {
+            ptr: unsafe {
+                transmute::<*mut JoinedCell<Owner, Dependent>, *mut u8>(self.joined_ptr.as_ptr())
+            },
+            layout: Layout::new::<JoinedCell<Owner, Dependent>>(),
+        };
+
         unsafe {
             // We must only drop owner and the struct itself,
             // The whole point of this drop guard is to clean up the partially
             // initialized struct should building the dependent fail.
             drop_in_place(&mut (*self.joined_ptr.as_ptr()).owner);
-
-            let layout = Layout::new::<JoinedCell<Owner, Dependent>>();
-            let joined_void_ptr =
-                transmute::<*mut JoinedCell<Owner, Dependent>, *mut u8>(self.joined_ptr.as_ptr());
-            dealloc(joined_void_ptr, layout);
         }
+
+        // Deallocation happens at end of scope
     }
 }
