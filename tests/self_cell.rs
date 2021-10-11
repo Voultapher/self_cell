@@ -63,7 +63,7 @@ impl PackedAst {
         self.ast_cell.borrow_owner()
     }
 
-    fn with_ast(&self, func: impl for<'a> FnOnce(&'a String, &'a Ast<'a>)) {
+    fn with_ast<'o>(&'o self, func: impl for<'a> FnOnce(&'a String, &'o Ast<'a>)) {
         self.ast_cell.with_dependent(func)
     }
 

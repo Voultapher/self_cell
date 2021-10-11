@@ -206,16 +206,16 @@ pub mod unsafe_self_cell;
 /// ```
 ///
 /// ```ignore
-/// fn with_dependent<Ret>(
-///     &self,
-///     func: impl for<'a> FnOnce(&'a $Owner, &'a $Dependent<'a>
+/// fn with_dependent<'outer_fn, Ret>(
+///     &'outer_fn self,
+///     func: impl for<'a> FnOnce(&'a $Owner, &'outer_fn $Dependent<'a>
 /// ) -> Ret) -> Ret
 /// ```
 ///
 /// ```ignore
-/// fn with_dependent_mut<Ret>(
-///     &mut self,
-///     func: impl for<'a> FnOnce(&'a $Owner, &'a mut $Dependent<'a>) -> Ret
+/// fn with_dependent_mut<'outer_fn, Ret>(
+///     &'outer_fn mut self,
+///     func: impl for<'a> FnOnce(&'a $Owner, &'outer_fn mut $Dependent<'a>) -> Ret
 /// ) -> Ret
 /// ```
 ///
@@ -489,7 +489,10 @@ macro_rules! self_cell {
             unsafe { self.unsafe_self_cell.borrow_owner::<$Dependent<'_q>>() }
         }
 
-        $Vis fn with_dependent<Ret>(&self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q $Dependent<'_q>) -> Ret) -> Ret {
+        $Vis fn with_dependent<'outer_fn, Ret>(
+            &'outer_fn self,
+            func: impl for<'_q> FnOnce(&'_q $Owner, &'outer_fn $Dependent<'_q>
+        ) -> Ret) -> Ret {
             unsafe {
                 func(
                     self.unsafe_self_cell.borrow_owner::<$Dependent>(),
@@ -498,7 +501,10 @@ macro_rules! self_cell {
             }
         }
 
-        $Vis fn with_dependent_mut<Ret>(&mut self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q mut $Dependent<'_q>) -> Ret) -> Ret {
+        $Vis fn with_dependent_mut<'outer_fn, Ret>(
+            &'outer_fn mut self,
+            func: impl for<'_q> FnOnce(&'_q $Owner, &'outer_fn mut $Dependent<'_q>) -> Ret
+        ) -> Ret {
             let (owner, dependent) = unsafe {
                     self.unsafe_self_cell.borrow_mut()
             };

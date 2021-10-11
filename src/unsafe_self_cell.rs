@@ -50,6 +50,8 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
         }
     }
 
+    // Calling any of these *unsafe* functions with the wrong Dependent type is UB.
+
     pub unsafe fn borrow_owner<'a, Dependent>(&'a self) -> &'a Owner {
         let joined_ptr =
             transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
