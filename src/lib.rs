@@ -472,6 +472,10 @@ macro_rules! self_cell {
                         })
                     }
                     Err(err) => {
+                        // In contrast to into_owner ptr::read, here no dependent
+                        // ever existed in this function and so we are sure its
+                        // drop impl can't access owner after the read.
+                        // And err can't return a reference to owner.
                         let owner_on_err = core::ptr::read(owner_ptr);
 
                         // Allowing drop_guard to finish would let it double free owner.
