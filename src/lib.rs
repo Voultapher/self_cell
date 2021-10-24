@@ -318,9 +318,7 @@ macro_rules! self_cell {
             $Dependent<'static>
         >,
 
-        // marker to ensure that contravariant owners don't imply covariance
-        // over the dependent. See issue #18
-        owner_marker: core::marker::PhantomData<$(&$OwnerLifetime)* ()>,
+        $(owner_marker: $crate::_covariant_owner_marker!($Covariance, $OwnerLifetime) ,)*
     }
 
     impl $(<$OwnerLifetime>)* $StructName $(<$OwnerLifetime>)* {
@@ -373,7 +371,7 @@ macro_rules! self_cell {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                         joined_void_ptr,
                     ),
-                    owner_marker: core::marker::PhantomData,
+                    $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)*
                 }
             }
         }
@@ -419,7 +417,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
-                            owner_marker: core::marker::PhantomData,
+                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)*
                         })
                     }
                     Err(err) => Err(err)
@@ -468,7 +466,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
-                            owner_marker: core::marker::PhantomData,
+                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)*
                         })
                     }
                     Err(err) => {
@@ -568,6 +566,35 @@ macro_rules! _covariant_access {
     };
     ($x:ident, $Vis:vis, $Dependent:ident) => {
         compile_error!("This macro only accepts `covariant` or `not_covariant`");
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _covariant_owner_marker {
+    (covariant, $OwnerLifetime:lifetime) => {
+        // Ensure that contravariant owners don't imply covariance
+        // over the dependent. See issue https://github.com/Voultapher/self_cell/issues/18
+        core::marker::PhantomData<&$OwnerLifetime ()>
+    };
+    (not_covariant, $OwnerLifetime:lifetime) => {
+        // See the discussion in https://github.com/Voultapher/self_cell/pull/29
+        //
+        // If the dependent is non_covariant, mark the owner as invariant over it's
+        // lifetime. Otherwise unsound use is possible.
+        core::marker::PhantomData<core::cell::UnsafeCell<&$OwnerLifetime ()>>
+    };
+    ($x:ident, $OwnerLifetime:lifetime) => {
+        compile_error!("This macro only accepts `covariant` or `not_covariant`");
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _covariant_owner_marker_ctor {
+    ($OwnerLifetime:lifetime) => {
+        // Helper to optionally expand into PhantomData for construction.
+        core::marker::PhantomData
     };
 }
 

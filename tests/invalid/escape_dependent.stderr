@@ -1,0 +1,24 @@
+error[E0597]: `cell` does not live long enough
+  --> $DIR/escape_dependent.rs:22:22
+   |
+22 |     let leaked_ref = cell.with_dependent(|_, dependent| dependent);
+   |                      ^^^^ borrowed value does not live long enough
+...
+28 | }
+   | -
+   | |
+   | `cell` dropped here while still borrowed
+   | borrow might be used here, when `cell` is dropped and runs the `Drop` code for type `NoCov`
+
+error[E0716]: temporary value dropped while borrowed
+  --> $DIR/escape_dependent.rs:23:21
+   |
+23 |     leaked_ref.set(&String::from("temporary"));
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^ - temporary value is freed at the end of this statement
+   |                     |
+   |                     creates a temporary which is freed while still in use
+...
+28 | }
+   | - borrow might be used here, when `cell` is dropped and runs the `Drop` code for type `NoCov`
+   |
+   = note: consider using a `let` binding to create a longer lived value
