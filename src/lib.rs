@@ -311,17 +311,17 @@ macro_rules! self_cell {
 ) => {
     #[repr(transparent)]
     $(#[$StructMeta])*
-    $Vis struct $StructName $(<$OwnerLifetime>)* {
+    $Vis struct $StructName $(<$OwnerLifetime>)? {
         unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
             $StructName$(<$OwnerLifetime>)?,
             $Owner,
             $Dependent<'static>
         >,
 
-        $(owner_marker: $crate::_covariant_owner_marker!($Covariance, $OwnerLifetime) ,)*
+        $(owner_marker: $crate::_covariant_owner_marker!($Covariance, $OwnerLifetime) ,)?
     }
 
-    impl $(<$OwnerLifetime>)* $StructName $(<$OwnerLifetime>)* {
+    impl $(<$OwnerLifetime>)? $StructName $(<$OwnerLifetime>)? {
         $Vis fn new(
             owner: $Owner,
             dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> $Dependent<'_q>
@@ -341,7 +341,7 @@ macro_rules! self_cell {
                 // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> FnOnce(&'x
                 // Owner) -> Dependent<'x>`.
 
-                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                type JoinedCell<'_q $(, $OwnerLifetime)?> =
                     $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
@@ -371,7 +371,7 @@ macro_rules! self_cell {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                         joined_void_ptr,
                     ),
-                    $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)*
+                    $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                 }
             }
         }
@@ -386,7 +386,7 @@ macro_rules! self_cell {
             unsafe {
                 // See fn new for more explanation.
 
-                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                type JoinedCell<'_q $(, $OwnerLifetime)?> =
                     $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
@@ -417,7 +417,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
-                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)*
+                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                         })
                     }
                     Err(err) => Err(err)
@@ -435,7 +435,7 @@ macro_rules! self_cell {
             unsafe {
                 // See fn new for more explanation.
 
-                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                type JoinedCell<'_q $(, $OwnerLifetime)?> =
                     $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
@@ -466,7 +466,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
-                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)*
+                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                         })
                     }
                     Err(err) => {
@@ -529,7 +529,7 @@ macro_rules! self_cell {
         }
     }
 
-    impl $(<$OwnerLifetime>)* Drop for $StructName $(<$OwnerLifetime>)* {
+    impl $(<$OwnerLifetime>)? Drop for $StructName $(<$OwnerLifetime>)? {
         fn drop(&mut self) {
             unsafe {
                 self.unsafe_self_cell.drop_joined::<$Dependent>();
