@@ -143,13 +143,13 @@ cargo miri test
 
 ### Related projects
 
+[ouroboros](https://github.com/joshua-maros/ouroboros)
+
 [rental](https://github.com/jpernst/rental)
 
 [Schroedinger](https://github.com/dureuill/sc)
 
 [owning_ref](https://github.com/Kimundi/owning-ref-rs)
-
-[ouroboros](https://github.com/joshua-maros/ouroboros)
 
 [ghost-cell](https://github.com/matthieu-m/ghost-cell)
 
