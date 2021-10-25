@@ -580,9 +580,9 @@ macro_rules! _covariant_owner_marker {
     (not_covariant, $OwnerLifetime:lifetime) => {
         // See the discussion in https://github.com/Voultapher/self_cell/pull/29
         //
-        // If the dependent is non_covariant, mark the owner as invariant over it's
+        // If the dependent is non_covariant, mark the owner as invariant over its
         // lifetime. Otherwise unsound use is possible.
-        core::marker::PhantomData<core::cell::UnsafeCell<&$OwnerLifetime ()>>
+        core::marker::PhantomData<fn(&$OwnerLifetime ()) -> &$OwnerLifetime ()>
     };
     ($x:ident, $OwnerLifetime:lifetime) => {
         compile_error!("This macro only accepts `covariant` or `not_covariant`");
