@@ -1,8 +1,9 @@
-error: lifetime may not live long enough
-  --> $DIR/leak_dependent.rs:18:58
+error[E0597]: `cell` does not live long enough
+  --> $DIR/leak_dependent.rs:18:23
    |
 18 |     let _leaked_ref = cell.with_dependent(|_, dependent| dependent);
-   |                                            -           - ^^^^^^^^^ returning this value requires that `'1` must outlive `'2`
-   |                                            |           |
-   |                                            |           return type of closure is &Cell<&'2 String>
-   |                                            has type `&'1 String`
+   |                       ^^^^                               --------- returning this value requires that `cell` is borrowed for `'static`
+   |                       |
+   |                       borrowed value does not live long enough
+19 | }
+   | - `cell` dropped here while still borrowed

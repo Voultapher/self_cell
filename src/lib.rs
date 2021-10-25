@@ -206,16 +206,16 @@ pub mod unsafe_self_cell;
 /// ```
 ///
 /// ```ignore
-/// fn with_dependent<Ret>(
-///     &self,
-///     func: impl for<'a> FnOnce(&'a $Owner, &'a $Dependent<'a>
+/// fn with_dependent<'outer_fn, Ret>(
+///     &'outer_fn self,
+///     func: impl for<'a> FnOnce(&'a $Owner, &'outer_fn $Dependent<'a>
 /// ) -> Ret) -> Ret
 /// ```
 ///
 /// ```ignore
-/// fn with_dependent_mut<Ret>(
-///     &mut self,
-///     func: impl for<'a> FnOnce(&'a $Owner, &'a mut $Dependent<'a>) -> Ret
+/// fn with_dependent_mut<'outer_fn, Ret>(
+///     &'outer_fn mut self,
+///     func: impl for<'a> FnOnce(&'a $Owner, &'outer_fn mut $Dependent<'a>) -> Ret
 /// ) -> Ret
 /// ```
 ///
@@ -311,19 +311,17 @@ macro_rules! self_cell {
 ) => {
     #[repr(transparent)]
     $(#[$StructMeta])*
-    $Vis struct $StructName $(<$OwnerLifetime>)* {
+    $Vis struct $StructName $(<$OwnerLifetime>)? {
         unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell<
             $StructName$(<$OwnerLifetime>)?,
             $Owner,
             $Dependent<'static>
         >,
 
-        // marker to ensure that contravariant owners don't imply covariance
-        // over the dependent. See issue #18
-        owner_marker: core::marker::PhantomData<$(&$OwnerLifetime)* ()>,
+        $(owner_marker: $crate::_covariant_owner_marker!($Covariance, $OwnerLifetime) ,)?
     }
 
-    impl $(<$OwnerLifetime>)* $StructName $(<$OwnerLifetime>)* {
+    impl $(<$OwnerLifetime>)? $StructName $(<$OwnerLifetime>)? {
         $Vis fn new(
             owner: $Owner,
             dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> $Dependent<'_q>
@@ -343,7 +341,7 @@ macro_rules! self_cell {
                 // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> FnOnce(&'x
                 // Owner) -> Dependent<'x>`.
 
-                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                type JoinedCell<'_q $(, $OwnerLifetime)?> =
                     $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
@@ -373,7 +371,7 @@ macro_rules! self_cell {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                         joined_void_ptr,
                     ),
-                    owner_marker: core::marker::PhantomData,
+                    $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                 }
             }
         }
@@ -388,7 +386,7 @@ macro_rules! self_cell {
             unsafe {
                 // See fn new for more explanation.
 
-                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                type JoinedCell<'_q $(, $OwnerLifetime)?> =
                     $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
@@ -419,7 +417,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
-                            owner_marker: core::marker::PhantomData,
+                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                         })
                     }
                     Err(err) => Err(err)
@@ -437,7 +435,7 @@ macro_rules! self_cell {
             unsafe {
                 // See fn new for more explanation.
 
-                type JoinedCell<'_q $(, $OwnerLifetime)*> =
+                type JoinedCell<'_q $(, $OwnerLifetime)?> =
                     $crate::unsafe_self_cell::JoinedCell<$Owner, $Dependent<'_q>>;
 
                 let layout = $crate::alloc::alloc::Layout::new::<JoinedCell>();
@@ -468,7 +466,7 @@ macro_rules! self_cell {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
-                            owner_marker: core::marker::PhantomData,
+                            $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                         })
                     }
                     Err(err) => {
@@ -493,7 +491,10 @@ macro_rules! self_cell {
             unsafe { self.unsafe_self_cell.borrow_owner::<$Dependent<'_q>>() }
         }
 
-        $Vis fn with_dependent<Ret>(&self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q $Dependent<'_q>) -> Ret) -> Ret {
+        $Vis fn with_dependent<'outer_fn, Ret>(
+            &'outer_fn self,
+            func: impl for<'_q> FnOnce(&'_q $Owner, &'outer_fn $Dependent<'_q>
+        ) -> Ret) -> Ret {
             unsafe {
                 func(
                     self.unsafe_self_cell.borrow_owner::<$Dependent>(),
@@ -502,7 +503,10 @@ macro_rules! self_cell {
             }
         }
 
-        $Vis fn with_dependent_mut<Ret>(&mut self, func: impl for<'_q> FnOnce(&'_q $Owner, &'_q mut $Dependent<'_q>) -> Ret) -> Ret {
+        $Vis fn with_dependent_mut<'outer_fn, Ret>(
+            &'outer_fn mut self,
+            func: impl for<'_q> FnOnce(&'_q $Owner, &'outer_fn mut $Dependent<'_q>) -> Ret
+        ) -> Ret {
             let (owner, dependent) = unsafe {
                     self.unsafe_self_cell.borrow_mut()
             };
@@ -529,7 +533,7 @@ macro_rules! self_cell {
         }
     }
 
-    impl $(<$OwnerLifetime>)* Drop for $StructName $(<$OwnerLifetime>)* {
+    impl $(<$OwnerLifetime>)? Drop for $StructName $(<$OwnerLifetime>)? {
         fn drop(&mut self) {
             unsafe {
                 self.unsafe_self_cell.drop_joined::<$Dependent>();
@@ -566,6 +570,35 @@ macro_rules! _covariant_access {
     };
     ($x:ident, $Vis:vis, $Dependent:ident) => {
         compile_error!("This macro only accepts `covariant` or `not_covariant`");
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _covariant_owner_marker {
+    (covariant, $OwnerLifetime:lifetime) => {
+        // Ensure that contravariant owners don't imply covariance
+        // over the dependent. See issue https://github.com/Voultapher/self_cell/issues/18
+        core::marker::PhantomData<&$OwnerLifetime ()>
+    };
+    (not_covariant, $OwnerLifetime:lifetime) => {
+        // See the discussion in https://github.com/Voultapher/self_cell/pull/29
+        //
+        // If the dependent is non_covariant, mark the owner as invariant over its
+        // lifetime. Otherwise unsound use is possible.
+        core::marker::PhantomData<fn(&$OwnerLifetime ()) -> &$OwnerLifetime ()>
+    };
+    ($x:ident, $OwnerLifetime:lifetime) => {
+        compile_error!("This macro only accepts `covariant` or `not_covariant`");
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _covariant_owner_marker_ctor {
+    ($OwnerLifetime:lifetime) => {
+        // Helper to optionally expand into PhantomData for construction.
+        core::marker::PhantomData
     };
 }
 
