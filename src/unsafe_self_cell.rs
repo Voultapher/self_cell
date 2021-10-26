@@ -19,9 +19,25 @@ use alloc::alloc::{dealloc, Layout};
 // 5. owner lives longer than dependent.
 
 #[doc(hidden)]
+#[repr(C)]
 pub struct JoinedCell<Owner, Dependent> {
     pub owner: Owner,
     pub dependent: Dependent,
+}
+
+impl<Owner, Dependent> JoinedCell<Owner, Dependent> {
+    /// This returns the offset to the dependent.
+    ///
+    /// In an ideal world this would be unnecessary and `addr_of_mut!` could
+    /// be used to calculate the offset to the dependent.  Because this crate
+    /// supports versions of Rust older than 1.51 where this macro was introduced
+    /// we have to do this manually.  Read the documentation of `addr_of_mut!`
+    /// about why a simple cast is not valid.
+    pub fn dependent_offset() -> usize {
+        #[repr(C)]
+        struct Sequential<A, B>(A, B);
+        core::mem::size_of::<Sequential<Owner, [Dependent; 0]>>()
+    }
 }
 
 // Library controlled struct that marks all accesses as unsafe.

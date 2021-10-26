@@ -353,8 +353,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let owner_ptr: *mut $Owner = joined_ptr.as_ptr().cast::<$Owner>();
+                let dependent_ptr: *mut $Dependent = joined_ptr.as_ptr().cast::<u8>().add(JoinedCell::dependent_offset()).cast::<$Dependent>();
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -398,8 +398,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let owner_ptr: *mut $Owner = joined_ptr.as_ptr().cast::<$Owner>();
+                let dependent_ptr: *mut $Dependent = joined_ptr.as_ptr().cast::<u8>().add(JoinedCell::dependent_offset()).cast::<$Dependent>();
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -447,8 +447,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let owner_ptr: *mut $Owner = joined_ptr.as_ptr().cast::<$Owner>();
+                let dependent_ptr: *mut $Dependent = joined_ptr.as_ptr().cast::<u8>().add(JoinedCell::dependent_offset()).cast::<$Dependent>();
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
