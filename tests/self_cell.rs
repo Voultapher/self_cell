@@ -834,6 +834,7 @@ fn cell_mem_size() {
 #[test]
 // Not supported by miri isolation.
 #[cfg_attr(miri, ignore)]
+#[cfg_attr(old_rust, ignore)]
 // Closure paths slashes show up as diff error on Windows.
 #[cfg(not(target_os = "windows"))]
 fn invalid_compile() {
@@ -868,6 +869,7 @@ fn try_build_manual(path: &str) {
 #[test]
 // Not supported by miri isolation.
 #[cfg_attr(miri, ignore)]
+#[cfg_attr(old_rust, ignore)]
 fn invalid_compile_manual() {
     try_build_manual("tests/invalid_manual/wrong_covariance");
 }

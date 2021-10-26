@@ -25,6 +25,28 @@ jobs:
       run: |
         cd benchmarks
         cargo build --release --verbose
+
+  old-rust:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: 1.42.0
+        profile: minimal
+        override: true
+    - name: Run tests
+      run: RUSTFLAGS=--cfg=old_rust cargo test --verbose
+    - name: Run examples
+      run: |
+        cd examples
+        cargo run --verbose --bin fallible_dependent_construction
+        cargo run --verbose --bin lazy_ast
   
   miri:
     runs-on: ubuntu-latest
