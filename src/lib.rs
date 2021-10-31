@@ -143,6 +143,28 @@ pub extern crate alloc;
 #[doc(hidden)]
 pub mod unsafe_self_cell;
 
+// older versions of rust do not support addr_of_mut!.  What we want to do here
+// is to emulate the behavior of that macro by going (incorrectly) via a reference
+// cast.  For discussions about this behavior see https://github.com/Voultapher/self_cell/pull/31
+// and https://github.com/Voultapher/self_cell/issues/30
+#[doc(hidden)]
+#[cfg(addr_of_mut_polyfill)]
+#[macro_export]
+macro_rules! __addr_of_mut {
+    ($expr:expr) => {
+        &mut $expr as *mut _
+    };
+}
+
+#[doc(hidden)]
+#[cfg(not(addr_of_mut_polyfill))]
+#[macro_export]
+macro_rules! __addr_of_mut {
+    ($expr:expr) => {
+        core::ptr::addr_of_mut!($expr)
+    };
+}
+
 /// This macro declares a new struct of `$StructName` and implements traits
 /// based on `$AutomaticDerive`.
 ///
@@ -353,8 +375,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let owner_ptr: *mut $Owner = $crate::__addr_of_mut!((*joined_ptr.as_ptr()).owner);
+                let dependent_ptr: *mut $Dependent = $crate::__addr_of_mut!((*joined_ptr.as_ptr()).dependent);
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -398,8 +420,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let owner_ptr: *mut $Owner = $crate::__addr_of_mut!((*joined_ptr.as_ptr()).owner);
+                let dependent_ptr: *mut $Dependent = $crate::__addr_of_mut!((*joined_ptr.as_ptr()).dependent);
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -447,8 +469,8 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let owner_ptr: *mut $Owner = $crate::__addr_of_mut!((*joined_ptr.as_ptr()).owner);
+                let dependent_ptr: *mut $Dependent = $crate::__addr_of_mut!((*joined_ptr.as_ptr()).dependent);
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
