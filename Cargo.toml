@@ -19,6 +19,7 @@ include = [
 ]
 
 [dependencies]
+rustversion = "1.0.5"
 
 [dev-dependencies]
 crossbeam-utils = "0.8.0"

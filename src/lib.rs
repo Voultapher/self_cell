@@ -148,8 +148,8 @@ pub mod unsafe_self_cell;
 // cast.  For discussions about this behavior see https://github.com/Voultapher/self_cell/pull/31
 // and https://github.com/Voultapher/self_cell/issues/30
 #[doc(hidden)]
-#[cfg(addr_of_mut_polyfill)]
 #[macro_export]
+#[rustversion::before(1.51)]
 macro_rules! __addr_of_mut {
     ($expr:expr) => {
         &mut $expr as *mut _
@@ -157,8 +157,8 @@ macro_rules! __addr_of_mut {
 }
 
 #[doc(hidden)]
-#[cfg(not(addr_of_mut_polyfill))]
 #[macro_export]
+#[rustversion::since(1.51)]
 macro_rules! __addr_of_mut {
     ($expr:expr) => {
         core::ptr::addr_of_mut!($expr)
