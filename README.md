@@ -153,6 +153,17 @@ cargo miri test
 
 [ghost-cell](https://github.com/matthieu-m/ghost-cell)
 
+## Min required rustc version
+
+By default the minimum required rustc version is 1.51.
+
+There is an optional feature you can enable called "old_rust" that enables
+support down to rustc version 1.36. However this requires polyfilling std
+library functionality with technically UB versions. Testing does not show older
+rustc versions (ab)using this. Use at your own risk.
+
+The minimum versions are a best effor and may change with any new major release.
+
 ## Contributing
 
 Please respect the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) when contributing.

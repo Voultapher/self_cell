@@ -1,0 +1,1 @@
+This directory contains a project with further tests that can't be part of the main tests as they require dependencies that can't be build with the min old_rust feature version. And dev-dependencies can't be optional.
