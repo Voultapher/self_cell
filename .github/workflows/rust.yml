@@ -1,6 +1,9 @@
-name: Rust
+name: Test
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+    types: [opened, reopened]
 
 jobs:
   stable_rustc_1_51:

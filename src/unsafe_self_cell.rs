@@ -192,7 +192,8 @@ impl<Owner, Dependent> Drop for OwnerAndCellDropGuard<Owner, Dependent> {
 // reference cast. Technically this is UB, but testing does not show the older
 // compiler versions (ab)using this. For discussions about this behavior see
 // https://github.com/Voultapher/self_cell/pull/31 and
-// https://github.com/Voultapher/self_cell/issues/30
+// https://github.com/Voultapher/self_cell/issues/30 and
+// https://github.com/Voultapher/self_cell/pull/33
 //
 // Because of 'procedural macros cannot expand to macro definitions'
 // we have wrap this in functions.
