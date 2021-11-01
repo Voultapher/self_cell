@@ -35,6 +35,7 @@ jobs:
         cd examples
         cargo run --verbose --bin fallible_dependent_construction
         cargo run --verbose --bin lazy_ast
+        cargo run --verbose --bin owner_with_lifetime
     - name: Build benchmarks
       run: |
         cd benchmarks
@@ -81,8 +82,9 @@ jobs:
     - name: Run examples x86_64-unknown-linux-gnu
       run: |
         cd examples
-        cargo miri run --verbose --bin fallible_dependent_construction
-        cargo miri run --verbose --bin lazy_ast
+        cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin fallible_dependent_construction
+        cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin lazy_ast
+        cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin owner_with_lifetime
 
     - name: Run tests mips64-unknown-linux-gnuabi64
       run: |
@@ -94,6 +96,7 @@ jobs:
     - name: Run examples mips64-unknown-linux-gnuabi64
       run: |
         cd examples
-        cargo miri run --verbose --bin fallible_dependent_construction
-        cargo miri run --verbose --bin lazy_ast
+        cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin fallible_dependent_construction
+        cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin lazy_ast
+        cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin owner_with_lifetime
 

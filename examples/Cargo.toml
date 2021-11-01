@@ -2,4 +2,5 @@
 members = [
     "fallible_dependent_construction",
     "lazy_ast",
+    "owner_with_lifetime",
 ]

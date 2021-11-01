@@ -135,6 +135,9 @@
 //! - [How to build a lazy AST with
 //!   self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
 //!
+//! - [How to use an owner type with
+//!     lifetime](https://github.com/Voultapher/self_cell/tree/main/examples/owner_with_lifetime)
+//!
 //! ### Min required rustc version
 //!
 //! By default the minimum required rustc version is 1.51.
