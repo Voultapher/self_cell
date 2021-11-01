@@ -159,8 +159,8 @@ By default the minimum required rustc version is 1.51.
 
 There is an optional feature you can enable called "old_rust" that enables
 support down to rustc version 1.36. However this requires polyfilling std
-library functionality with technically UB versions. Testing does not show older
-rustc versions (ab)using this. Use at your own risk.
+library functionality for older rustc with technically UB versions. Testing does
+not show older rustc versions (ab)using this. Use at your own risk.
 
 The minimum versions are a best effor and may change with any new major release.
 

@@ -141,10 +141,11 @@
 //!
 //! There is an optional feature you can enable called "old_rust" that enables
 //! support down to rustc version 1.36. However this requires polyfilling std
-//! library functionality with technically UB versions. Testing does not show older
-//! rustc versions (ab)using this. Use at your own risk.
+//! library functionality for older rustc with technically UB versions. Testing
+//! does not show older rustc versions (ab)using this. Use at your own risk.
 //!
-//! The minimum versions are a best effor and may change with any new major release.
+//! The minimum versions are a best effor and may change with any new major
+//! release.
 
 #![no_std]
 
@@ -364,8 +365,7 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = $crate::_addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = $crate::_addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let (owner_ptr, dependent_ptr) = JoinedCell::_field_pointers(joined_ptr.as_ptr());
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -409,8 +409,7 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = $crate::_addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = $crate::_addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let (owner_ptr, dependent_ptr) = JoinedCell::_field_pointers(joined_ptr.as_ptr());
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -458,8 +457,7 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = $crate::_addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = $crate::_addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let (owner_ptr, dependent_ptr) = JoinedCell::_field_pointers(joined_ptr.as_ptr());
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -558,30 +556,6 @@ macro_rules! self_cell {
         $crate::_impl_automatic_derive!($AutomaticDerive, $StructName);
     )*)*
 };
-}
-
-// Older versions of rust do not support addr_of_mut!. What we want to do here
-// is to emulate the behavior of that macro by going (incorrectly) via a
-// reference cast. Technically this is UB, but testing does not show the older
-// compiler versions (ab)using this. For discussions about this behavior see
-// https://github.com/Voultapher/self_cell/pull/31 and
-// https://github.com/Voultapher/self_cell/issues/30
-#[doc(hidden)]
-#[macro_export]
-#[cfg(feature = "old_rust")]
-macro_rules! _addr_of_mut {
-    ($expr:expr) => {
-        &mut $expr as *mut _
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(not(feature = "old_rust"))]
-macro_rules! _addr_of_mut {
-    ($expr:expr) => {
-        core::ptr::addr_of_mut!($expr)
-    };
 }
 
 #[doc(hidden)]
