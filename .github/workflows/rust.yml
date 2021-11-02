@@ -28,6 +28,8 @@ jobs:
       run: |
         cd tests-extra
         cargo test --verbose
+    - name: Run tests feature old_rust
+      run: cargo test --verbose --features=old_rust
     - name: Run examples
       run: |
         cd examples
