@@ -186,3 +186,45 @@ impl<Owner, Dependent> Drop for OwnerAndCellDropGuard<Owner, Dependent> {
         // Deallocation happens at end of scope
     }
 }
+
+// Older versions of rust do not support addr_of_mut!. What we want to do here
+// is to emulate the behavior of that macro by going (incorrectly) via a
+// reference cast. Technically this is UB, but testing does not show the older
+// compiler versions (ab)using this. For discussions about this behavior see
+// https://github.com/Voultapher/self_cell/pull/31 and
+// https://github.com/Voultapher/self_cell/issues/30 and
+// https://github.com/Voultapher/self_cell/pull/33
+//
+// Because of 'procedural macros cannot expand to macro definitions'
+// we have wrap this in functions.
+impl<Owner, Dependent> JoinedCell<Owner, Dependent> {
+    #[doc(hidden)]
+    #[cfg(not(feature = "old_rust"))]
+    pub unsafe fn _field_pointers(this: *mut Self) -> (*mut Owner, *mut Dependent) {
+        let owner_ptr = core::ptr::addr_of_mut!((*this).owner);
+        let dependent_ptr = core::ptr::addr_of_mut!((*this).dependent);
+
+        (owner_ptr, dependent_ptr)
+    }
+
+    #[doc(hidden)]
+    #[cfg(feature = "old_rust")]
+    #[rustversion::since(1.51)]
+    pub unsafe fn _field_pointers(this: *mut Self) -> (*mut Owner, *mut Dependent) {
+        let owner_ptr = core::ptr::addr_of_mut!((*this).owner);
+        let dependent_ptr = core::ptr::addr_of_mut!((*this).dependent);
+
+        (owner_ptr, dependent_ptr)
+    }
+
+    #[doc(hidden)]
+    #[cfg(feature = "old_rust")]
+    #[rustversion::before(1.51)]
+    pub unsafe fn _field_pointers(this: *mut Self) -> (*mut Owner, *mut Dependent) {
+        // See comment above, technically this is UB.
+        let owner_ptr = &mut (*this).owner as *mut Owner;
+        let dependent_ptr = &mut (*this).dependent as *mut Dependent;
+
+        (owner_ptr, dependent_ptr)
+    }
+}

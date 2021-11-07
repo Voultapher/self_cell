@@ -134,6 +134,18 @@
 //!
 //! - [How to build a lazy AST with
 //!   self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
+//!
+//! ### Min required rustc version
+//!
+//! By default the minimum required rustc version is 1.51.
+//!
+//! There is an optional feature you can enable called "old_rust" that enables
+//! support down to rustc version 1.36. However this requires polyfilling std
+//! library functionality for older rustc with technically UB versions. Testing
+//! does not show older rustc versions (ab)using this. Use at your own risk.
+//!
+//! The minimum versions are a best effor and may change with any new major
+//! release.
 
 #![no_std]
 
@@ -353,8 +365,7 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let (owner_ptr, dependent_ptr) = JoinedCell::_field_pointers(joined_ptr.as_ptr());
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -398,8 +409,7 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let (owner_ptr, dependent_ptr) = JoinedCell::_field_pointers(joined_ptr.as_ptr());
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
@@ -447,8 +457,7 @@ macro_rules! self_cell {
                     joined_void_ptr
                 );
 
-                let owner_ptr: *mut $Owner = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).owner);
-                let dependent_ptr: *mut $Dependent = core::ptr::addr_of_mut!((*joined_ptr.as_ptr()).dependent);
+                let (owner_ptr, dependent_ptr) = JoinedCell::_field_pointers(joined_ptr.as_ptr());
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
