@@ -16,6 +16,8 @@ categories = ["rust-patterns", "memory-management"]
 include = [
     "src/*.rs",
     "Cargo.toml",
+    "README.md",
+    "LICENSE",
 ]
 
 [dependencies]
