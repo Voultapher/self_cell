@@ -622,7 +622,7 @@ fn nested_cells() {
 
 #[test]
 fn panic_in_from_owner() {
-    // panicing in user provided code shouldn't leak memory.
+    // panicking in user provided code shouldn't leak memory.
 
     type Dependent<'a> = &'a String;
 
