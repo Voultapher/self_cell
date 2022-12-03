@@ -191,21 +191,21 @@ pub mod unsafe_self_cell;
 /// ```ignore
 /// fn new(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> $Dependent<'a>
+///     dependent_builder: impl for<'a> FnOnce(&'a mut $Owner) -> $Dependent<'a>
 /// ) -> Self
 /// ```
 ///
 /// ```ignore
 /// fn try_new<Err>(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+///     dependent_builder: impl for<'a> FnOnce(&'a mut $Owner) -> Result<$Dependent<'a>, Err>
 /// ) -> Result<Self, Err>
 /// ```
 ///
 /// ```ignore
 /// fn try_new_or_recover<Err>(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+///     dependent_builder: impl for<'a> FnOnce(&'a mut $Owner) -> Result<$Dependent<'a>, Err>
 /// ) -> Result<Self, ($Owner, Err)>
 /// ```
 ///
@@ -339,7 +339,7 @@ macro_rules! self_cell {
     impl $(<$OwnerLifetime>)? $StructName $(<$OwnerLifetime>)? {
         $Vis fn new(
             owner: $Owner,
-            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> $Dependent<'_q>
+            dependent_builder: impl for<'_q> FnOnce(&'_q mut $Owner) -> $Dependent<'_q>
         ) -> Self {
             use core::ptr::NonNull;
 
@@ -378,7 +378,7 @@ macro_rules! self_cell {
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
                 // Initialize dependent with owner reference in final place.
-                dependent_ptr.write(dependent_builder(&*owner_ptr));
+                dependent_ptr.write(dependent_builder(&mut *owner_ptr));
                 core::mem::forget(drop_guard);
 
                 Self {
@@ -393,7 +393,7 @@ macro_rules! self_cell {
         $Vis fn try_new<Err>(
             owner: $Owner,
             dependent_builder:
-                impl for<'_q> FnOnce(&'_q $Owner) -> core::result::Result<$Dependent<'_q>, Err>
+                impl for<'_q> FnOnce(&'_q mut $Owner) -> core::result::Result<$Dependent<'_q>, Err>
         ) -> core::result::Result<Self, Err> {
             use core::ptr::NonNull;
 
@@ -421,7 +421,7 @@ macro_rules! self_cell {
                 let mut drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
-                match dependent_builder(&*owner_ptr) {
+                match dependent_builder(&mut *owner_ptr) {
                     Ok(dependent) => {
                         dependent_ptr.write(dependent);
                         core::mem::forget(drop_guard);
@@ -441,7 +441,7 @@ macro_rules! self_cell {
         $Vis fn try_new_or_recover<Err>(
             owner: $Owner,
             dependent_builder:
-                impl for<'_q> FnOnce(&'_q $Owner) -> core::result::Result<$Dependent<'_q>, Err>
+                impl for<'_q> FnOnce(&'_q mut $Owner) -> core::result::Result<$Dependent<'_q>, Err>
         ) -> core::result::Result<Self, ($Owner, Err)> {
             use core::ptr::NonNull;
 
@@ -469,7 +469,7 @@ macro_rules! self_cell {
                 let mut drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
-                match dependent_builder(&*owner_ptr) {
+                match dependent_builder(&mut *owner_ptr) {
                     Ok(dependent) => {
                         dependent_ptr.write(dependent);
                         core::mem::forget(drop_guard);

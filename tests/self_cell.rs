@@ -23,6 +23,12 @@ impl<'x> From<&'x String> for Ast<'x> {
     }
 }
 
+impl<'x> From<&'x mut String> for Ast<'x> {
+    fn from<'a>(body: &'a mut String) -> Ast<'a> {
+        Ast::from(&*body)
+    }
+}
+
 self_cell!(
     #[doc(hidden)]
     struct PackedAstCell {
@@ -235,7 +241,8 @@ fn catch_panic_in_from() {
     let owner = Owner("This string is no trout".into());
 
     let ast_cell_result = NoLeakCell::try_new(owner.clone(), |owner| {
-        catch_unwind(|| PanicCtor::new(&owner))
+        let owner_ref: &Owner = owner;
+        catch_unwind(|| PanicCtor::new(owner_ref))
     });
     assert!(ast_cell_result.is_err());
 }
@@ -701,8 +708,8 @@ fn lazy_ast() {
     #[derive(Debug)]
     struct LazyAst<'a>(OnceCell<Ast<'a>>);
 
-    impl<'a> From<&'a String> for LazyAst<'a> {
-        fn from(_: &'a String) -> Self {
+    impl<'a> From<&'a mut String> for LazyAst<'a> {
+        fn from(_: &'a mut String) -> Self {
             Self(OnceCell::new())
         }
     }
@@ -740,6 +747,47 @@ fn lazy_ast() {
         assert!(dependent.0.get().is_some());
         assert_eq!(dependent.0.get_or_init(|| owner.into()), &expected_ast);
     });
+}
+
+#[test]
+fn mutable_owner_during_construction() {
+    #[derive(Debug)]
+    struct Owner {
+        val: String,
+    }
+
+    impl Owner {
+        fn new() -> Self {
+            Self { val: String::new() }
+        }
+
+        fn fill(&mut self) -> &str {
+            self.val = String::from("some longer string xxx Ghost 2017");
+            &self.val[7..9]
+        }
+    }
+
+    type Dependent<'a> = &'a str;
+
+    self_cell!(
+        struct Cell {
+            owner: Owner,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+
+        impl {Debug}
+    );
+
+    let test_cell = |cell: Cell| {
+        assert_eq!(cell.borrow_owner().val, "some longer string xxx Ghost 2017");
+        assert_eq!(cell.borrow_dependent(), &"ng");
+    };
+
+    test_cell(Cell::new(Owner::new(), |owner| owner.fill()));
+    test_cell(Cell::try_new(Owner::new(), |owner| Ok::<_, ()>(owner.fill())).unwrap());
+    test_cell(Cell::try_new_or_recover(Owner::new(), |owner| Ok::<_, ()>(owner.fill())).unwrap());
 }
 
 #[test]
