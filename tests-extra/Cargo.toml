@@ -7,6 +7,10 @@ edition = "2018"
 
 [dependencies]
 self_cell = { path = ".." }
-crossbeam-utils = "0.8.0"
-impls = "1.0.3"
-trybuild = "1.0.37"
+crossbeam-utils = "=0.8.7"
+impls = "=1.0.3"
+trybuild = "=1.0.37"
+
+# Pin specific versions to ensure transitive dependencies.
+serde_json = "=1.0.6"
+serde = "=1.0.103"
