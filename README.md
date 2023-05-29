@@ -141,6 +141,14 @@ cargo test
 cargo miri test
 ```
 
+## Why should I use this instead of [ouroboros](https://github.com/joshua-maros/ouroboros) ?
+
+Obviously I'm biased as the author of `self_cell`, but I'd say this as a fair
+recommendation, if `self_cell` works for you, use that, you'll [save on compile
+times](https://github.com/uwe-app/bracket/pull/44) and complexity and get better
+documentation. If you need some complex specific thing that can't be modeled
+with it, e.g. mutable access to owner during construction, use `ouroboros`.
+
 ### Related projects
 
 [ouroboros](https://github.com/joshua-maros/ouroboros)
