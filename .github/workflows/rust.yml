@@ -24,10 +24,6 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
-    - name: Run tests-extra
-      run: |
-        cd tests-extra
-        cargo test --verbose
     - name: Run tests feature old_rust
       run: cargo test --verbose --features=old_rust
     - name: Run examples
@@ -99,4 +95,8 @@ jobs:
         cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin fallible_dependent_construction
         cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin lazy_ast
         cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin owner_with_lifetime
+    - name: Run tests-extra
+      run: |
+        cd tests-extra
+        cargo test --verbose
 
