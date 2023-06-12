@@ -141,25 +141,13 @@ cargo test
 cargo miri test
 ```
 
-## Why should I use this instead of [ouroboros](https://github.com/joshua-maros/ouroboros) ?
-
-Obviously I'm biased as the author of `self_cell`, but I'd say this as a fair
-recommendation, if `self_cell` works for you, use that, you'll [save on compile
-times](https://github.com/uwe-app/bracket/pull/44) and complexity and get better
-documentation. If you need some complex specific thing that can't be modeled
-with it, e.g. mutable access to owner during construction, use `ouroboros`.
-
 ### Related projects
 
-[ouroboros](https://github.com/joshua-maros/ouroboros)
-
-[rental](https://github.com/jpernst/rental)
-
-[Schroedinger](https://github.com/dureuill/sc)
-
-[owning_ref](https://github.com/Kimundi/owning-ref-rs)
-
-[ghost-cell](https://github.com/matthieu-m/ghost-cell)
+- [ouroboros](https://github.com/joshua-maros/ouroboros) | [soundness issues](https://rustsec.org/advisories/RUSTSEC-2023-0042.html) and [deprecated](https://github.com/joshua-maros/ouroboros/issues/88)
+- [rental](https://github.com/jpernst/rental) | soundness issues (tests fail with recent miri versions) and [deprecated](https://github.com/jpernst/rental#warning-this-crate-is-no-longer-maintained-or-supported)
+- [Schroedinger](https://github.com/dureuill/sc) | [soundness issues](https://github.com/dureuill/sc/issues/1)
+- [owning_ref](https://github.com/Kimundi/owning-ref-rs) | [soundness issues](https://rustsec.org/advisories/RUSTSEC-2022-0040.html) and [seems unmaintained](https://github.com/Kimundi/owning-ref-rs/issues/81)
+- [ghost-cell](https://github.com/matthieu-m/ghost-cell)
 
 ## Min required rustc version
 
