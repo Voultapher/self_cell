@@ -143,7 +143,7 @@ cargo miri test
 
 ### Related projects
 
-- [ouroboros](https://github.com/joshua-maros/ouroboros) | [soundness issues](https://rustsec.org/advisories/RUSTSEC-2023-0042.html) and [deprecated](https://github.com/joshua-maros/ouroboros/issues/88)
+- [ouroboros](https://github.com/joshua-maros/ouroboros)
 - [rental](https://github.com/jpernst/rental) | soundness issues (tests fail with recent miri versions) and [deprecated](https://github.com/jpernst/rental#warning-this-crate-is-no-longer-maintained-or-supported)
 - [Schroedinger](https://github.com/dureuill/sc) | [soundness issues](https://github.com/dureuill/sc/issues/1)
 - [owning_ref](https://github.com/Kimundi/owning-ref-rs) | [soundness issues](https://rustsec.org/advisories/RUSTSEC-2022-0040.html) and [seems unmaintained](https://github.com/Kimundi/owning-ref-rs/issues/81)
