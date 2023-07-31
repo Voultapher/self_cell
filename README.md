@@ -148,6 +148,7 @@ cargo miri test
 - [Schroedinger](https://github.com/dureuill/sc) | [soundness issues](https://github.com/dureuill/sc/issues/1)
 - [owning_ref](https://github.com/Kimundi/owning-ref-rs) | [soundness issues](https://rustsec.org/advisories/RUSTSEC-2022-0040.html) and [seems unmaintained](https://github.com/Kimundi/owning-ref-rs/issues/81)
 - [ghost-cell](https://github.com/matthieu-m/ghost-cell)
+- [qcell](https://github.com/uazu/qcell/)
 - [selfref](https://docs.rs/selfref)
 
 ## Min required rustc version
