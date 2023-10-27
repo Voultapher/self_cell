@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-use core::mem::{self, transmute};
+use core::mem;
 use core::ptr::{drop_in_place, read, NonNull};
 
 extern crate alloc;
@@ -53,22 +53,19 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
     // Calling any of these *unsafe* functions with the wrong Dependent type is UB.
 
     pub unsafe fn borrow_owner<'a, Dependent>(&'a self) -> &'a Owner {
-        let joined_ptr =
-            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
+        let joined_ptr = self.joined_void_ptr.cast::<JoinedCell<Owner, Dependent>>();
 
         &(*joined_ptr.as_ptr()).owner
     }
 
     pub unsafe fn borrow_dependent<'a, Dependent>(&'a self) -> &'a Dependent {
-        let joined_ptr =
-            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
+        let joined_ptr = self.joined_void_ptr.cast::<JoinedCell<Owner, Dependent>>();
 
         &(*joined_ptr.as_ptr()).dependent
     }
 
     pub unsafe fn borrow_mut<'a, Dependent>(&'a mut self) -> (&'a Owner, &'a mut Dependent) {
-        let joined_ptr =
-            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
+        let joined_ptr = self.joined_void_ptr.cast::<JoinedCell<Owner, Dependent>>();
 
         // This function used to return `&'a mut JoinedCell<Owner, Dependent>`.
         // It now creates two references to the fields instead to avoid claiming mutable access
@@ -81,8 +78,7 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
 
     // Any subsequent use of this struct other than dropping it is UB.
     pub unsafe fn drop_joined<Dependent>(&mut self) {
-        let joined_ptr =
-            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
+        let joined_ptr = self.joined_void_ptr.cast::<JoinedCell<Owner, Dependent>>();
 
         // Also used in case drop_in_place(...dependent) fails
         let _guard = OwnerAndCellDropGuard { joined_ptr };
@@ -98,8 +94,7 @@ impl<ContainedIn, Owner, DependentStatic> UnsafeSelfCell<ContainedIn, Owner, Dep
     }
 
     pub unsafe fn into_owner<Dependent>(self) -> Owner {
-        let joined_ptr =
-            transmute::<NonNull<u8>, NonNull<JoinedCell<Owner, Dependent>>>(self.joined_void_ptr);
+        let joined_ptr = self.joined_void_ptr.cast::<JoinedCell<Owner, Dependent>>();
 
         // In case drop_in_place(...dependent) fails
         let drop_guard = OwnerAndCellDropGuard::new(joined_ptr);
@@ -170,9 +165,7 @@ impl<Owner, Dependent> Drop for OwnerAndCellDropGuard<Owner, Dependent> {
 
         // Deallocate even when the drop_in_place(...owner) panics
         let _guard = DeallocGuard {
-            ptr: unsafe {
-                transmute::<*mut JoinedCell<Owner, Dependent>, *mut u8>(self.joined_ptr.as_ptr())
-            },
+            ptr: self.joined_ptr.as_ptr() as *mut u8,
             layout: Layout::new::<JoinedCell<Owner, Dependent>>(),
         };
 
