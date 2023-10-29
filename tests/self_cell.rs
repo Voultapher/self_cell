@@ -1,7 +1,5 @@
 // The unsafe being used gets tested with miri in the CI.
 
-#![deny(private_in_public)]
-
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::fmt::Debug;
@@ -185,7 +183,7 @@ fn from_fn() {
 
     let expected_str = "small pink bike";
 
-    let fn_cell = FnCell::new(expected_str.clone().into(), |owner| {
+    let fn_cell = FnCell::new(expected_str.into(), |owner| {
         // Make sure it only gets called once.
         extra_outside_state = if let Some(x) = extra_outside_state {
             Some(x + 5)
