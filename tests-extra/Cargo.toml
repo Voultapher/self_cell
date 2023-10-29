@@ -14,3 +14,4 @@ trybuild = "=1.0.37"
 # Pin specific versions to ensure transitive dependencies.
 serde_json = "=1.0.6"
 serde = "=1.0.103"
+proc-macro2 = "=1.0.43"
