@@ -1,9 +1,8 @@
 name: Test
 
 on:
-  push:
   pull_request:
-    types: [opened, reopened]
+  workflow_dispatch:
 
 jobs:
   stable_rustc_1_51:
