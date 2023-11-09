@@ -263,7 +263,7 @@ pub mod unsafe_self_cell;
 ///
 ///   * **covariant**: This generates the direct reference accessor function
 ///     `borrow_dependent`. This is only safe to do if this compiles `fn
-///     _assert_covariance<'x: 'y, 'y>(x: $Dependent<'x>) -> $Dependent<'y>
+///     _assert_covariance<'x: 'y, 'y>(x: &'y $Dependent<'x>) -> &'y $Dependent<'y>
 ///     {x}`. Otherwise you could choose a lifetime that is too short for types
 ///     with interior mutability like `Cell`, which can lead to UB in safe code.
 ///     Which would violate the promise of this library that it is safe-to-use.
