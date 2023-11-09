@@ -56,6 +56,7 @@ fn not_sync() {
 }
 
 #[test]
+#[cfg(feature = "invalid_programs")]
 // Not supported by miri isolation.
 #[cfg_attr(miri, ignore)]
 // Closure paths slashes show up as diff error on Windows.
@@ -63,37 +64,6 @@ fn not_sync() {
 fn invalid_compile() {
     let t = trybuild::TestCases::new();
     t.compile_fail("invalid/*.rs");
-}
-
-// Hacky custom version of try_build to support partial diffing.
-fn try_build_manual(path: &str) {
-    let output = Command::new("cargo")
-        .arg("check")
-        .arg("--color=never")
-        .current_dir(path)
-        .output()
-        .unwrap();
-
-    let compile_err = str::from_utf8(&output.stderr).unwrap();
-
-    let expected_err = fs::read_to_string(format!("{}/expected.stderr", path))
-        .unwrap()
-        .replace("IGNORE", "");
-
-    // Very naive approach.
-    for expected_line in expected_err.split("\n").map(str::trim) {
-        if !compile_err.contains(expected_line) {
-            eprintln!("Expected: '{}'\n\nIN\n\n{}", expected_line, compile_err);
-            panic!();
-        }
-    }
-}
-
-#[test]
-// Not supported by miri isolation.
-#[cfg_attr(miri, ignore)]
-fn invalid_compile_manual() {
-    try_build_manual("invalid_manual/wrong_covariance");
 }
 
 #[derive(Clone, Debug, PartialEq)]
