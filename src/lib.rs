@@ -577,7 +577,7 @@ macro_rules! _covariant_access {
     (covariant, $Vis:vis, $Dependent:ident) => {
         /// Borrows dependent.
         $Vis fn borrow_dependent<'_q>(&'_q self) -> &'_q $Dependent<'_q> {
-            fn _assert_covariance<'x: 'y, 'y>(x: $Dependent<'x>) -> $Dependent<'y> {
+            fn _assert_covariance<'x: 'y, 'y>(x: &'y $Dependent<'x>) -> &'y $Dependent<'y> {
                 //  This function only compiles for covariant types.
                 x // Change the macro invocation to not_covariant.
             }
