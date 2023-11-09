@@ -28,7 +28,7 @@ jobs:
     - name: Run tests-extra
       run: |
         cd tests-extra
-        cargo test --verbose
+        cargo test --features=invalid_programs --verbose
     - name: Run examples
       run: |
         cd examples

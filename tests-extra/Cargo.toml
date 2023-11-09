@@ -9,9 +9,17 @@ edition = "2018"
 self_cell = { path = ".." }
 crossbeam-utils = "=0.8.7"
 impls = "=1.0.3"
-trybuild = "=1.0.37"
+trybuild = { version = "=1.0.37", optional = true }
 
 # Pin specific versions to ensure transitive dependencies.
 serde_json = "=1.0.6"
 serde = "=1.0.103"
 proc-macro2 = "=1.0.43"
+
+[features]
+default = []
+
+# Enable testing of specific compiler errors, that are expected when building programs that would
+# make self_cell unsound if they compiled successsfully. Because rustc keeps chainging the layout of
+# compiler errors, this feature requires rustc version 1.51.
+invalid_programs = ["trybuild"]
