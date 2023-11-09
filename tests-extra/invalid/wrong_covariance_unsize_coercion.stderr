@@ -1,0 +1,16 @@
+error[E0623]: lifetime mismatch
+  --> $DIR/wrong_covariance_unsize_coercion.rs:6:1
+   |
+6  | / self_cell! {
+7  | |     struct WrongVarianceExample {
+8  | |         owner: (),
+9  | |
+...  |
+12 | |     }
+13 | | }
+   | | ^
+   | | |
+   | |_these two types are declared with different lifetimes...
+   |   ...but data from `x` flows into `x` here
+   |
+   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
