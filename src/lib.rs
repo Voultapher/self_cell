@@ -159,4 +159,4 @@
 
 #![no_std]
 
-pub use self_cell::self_cell;
+pub use new_self_cell::self_cell;

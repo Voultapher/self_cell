@@ -21,11 +21,11 @@ include = [
 ]
 
 [dependencies]
-self_cell = "1"
+new_self_cell = { package = "self_cell", version = "1" }
 
 [features]
 # This optional feature lowers the minimum rustc version from 1.51 to 1.36.
 # However this requires polyfilling std library functionality for older rustc
 # with technically UB versions. Testing does not show older rustc versions
 # (ab)using this. Use at
-old_rust = ["self_cell/old_rust"]
+old_rust = ["new_self_cell/old_rust"]
