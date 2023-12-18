@@ -94,7 +94,7 @@ struct FnOnce<T> {
 mod core {
     pub mod ptr {
         #[allow(dead_code)]
-        pub const unsafe fn read<T>(_src: *const T) -> T {
+        pub unsafe fn read<T>(_src: *const T) -> T {
             panic!("Wrong ptr::read function called")
         }
     }
