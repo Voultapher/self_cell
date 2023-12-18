@@ -27,7 +27,7 @@
 //! impl NewStructName {
 //!     fn new(
 //!         owner: Owner,
-//!         dependent_builder: impl for<'a> std::ops::FnOnce(&'a Owner) -> Dependent<'a>
+//!         dependent_builder: impl for<'a> ::core::ops::FnOnce(&'a Owner) -> Dependent<'a>
 //!     ) -> NewStructName { ... }
 //!     fn borrow_owner<'a>(&'a self) -> &'a Owner { ... }
 //!     fn borrow_dependent<'a>(&'a self) -> &'a Dependent<'a> { ... }
@@ -191,21 +191,21 @@ pub mod unsafe_self_cell;
 /// ```ignore
 /// fn new(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> std::ops::FnOnce(&'a $Owner) -> $Dependent<'a>
+///     dependent_builder: impl for<'a> ::core::ops::FnOnce(&'a $Owner) -> $Dependent<'a>
 /// ) -> Self
 /// ```
 ///
 /// ```ignore
 /// fn try_new<Err>(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> std::ops::FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+///     dependent_builder: impl for<'a> ::core::ops::FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
 /// ) -> Result<Self, Err>
 /// ```
 ///
 /// ```ignore
 /// fn try_new_or_recover<Err>(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> std::ops::FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+///     dependent_builder: impl for<'a> ::core::ops::FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
 /// ) -> Result<Self, ($Owner, Err)>
 /// ```
 ///
@@ -223,14 +223,14 @@ pub mod unsafe_self_cell;
 /// ```ignore
 /// fn with_dependent<'outer_fn, Ret>(
 ///     &'outer_fn self,
-///     func: impl for<'a> std::ops::FnOnce(&'a $Owner, &'outer_fn $Dependent<'a>
+///     func: impl for<'a> ::core::ops::FnOnce(&'a $Owner, &'outer_fn $Dependent<'a>
 /// ) -> Ret) -> Ret
 /// ```
 ///
 /// ```ignore
 /// fn with_dependent_mut<'outer_fn, Ret>(
 ///     &'outer_fn mut self,
-///     func: impl for<'a> std::ops::FnOnce(&'a $Owner, &'outer_fn mut $Dependent<'a>) -> Ret
+///     func: impl for<'a> ::core::ops::FnOnce(&'a $Owner, &'outer_fn mut $Dependent<'a>) -> Ret
 /// ) -> Ret
 /// ```
 ///
@@ -345,7 +345,7 @@ macro_rules! self_cell {
         /// remains valid for the lifetime of the constructed struct.
         $Vis fn new(
             owner: $Owner,
-            dependent_builder: impl for<'_q> std::ops::FnOnce(&'_q $Owner) -> $Dependent<'_q>
+            dependent_builder: impl for<'_q> ::core::ops::FnOnce(&'_q $Owner) -> $Dependent<'_q>
         ) -> Self {
             use ::core::ptr::NonNull;
 
@@ -359,7 +359,7 @@ macro_rules! self_cell {
                 // capture additional references in `dependent_builder` and then
                 // return them as part of Dependent. Eg. it should be impossible
                 // to express: '_q should outlive 'x here `fn
-                // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> std::ops::FnOnce(&'x
+                // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> ::core::ops::FnOnce(&'x
                 // Owner) -> Dependent<'x>`.
 
                 type JoinedCell<'_q $(, $OwnerLifetime)?> =
@@ -400,7 +400,7 @@ macro_rules! self_cell {
         $Vis fn try_new<Err>(
             owner: $Owner,
             dependent_builder:
-                impl for<'_q> std::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
+                impl for<'_q> ::core::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
         ) -> ::core::result::Result<Self, Err> {
             use ::core::ptr::NonNull;
 
@@ -449,7 +449,7 @@ macro_rules! self_cell {
         $Vis fn try_new_or_recover<Err>(
             owner: $Owner,
             dependent_builder:
-                impl for<'_q> std::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
+                impl for<'_q> ::core::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
         ) -> ::core::result::Result<Self, ($Owner, Err)> {
             use ::core::ptr::NonNull;
 
@@ -513,7 +513,7 @@ macro_rules! self_cell {
         /// Calls given closure `func` with a shared reference to dependent.
         $Vis fn with_dependent<'outer_fn, Ret>(
             &'outer_fn self,
-            func: impl for<'_q> std::ops::FnOnce(&'_q $Owner, &'outer_fn $Dependent<'_q>
+            func: impl for<'_q> ::core::ops::FnOnce(&'_q $Owner, &'outer_fn $Dependent<'_q>
         ) -> Ret) -> Ret {
             unsafe {
                 func(
@@ -526,7 +526,7 @@ macro_rules! self_cell {
         /// Calls given closure `func` with an unique reference to dependent.
         $Vis fn with_dependent_mut<'outer_fn, Ret>(
             &'outer_fn mut self,
-            func: impl for<'_q> std::ops::FnOnce(&'_q $Owner, &'outer_fn mut $Dependent<'_q>) -> Ret
+            func: impl for<'_q> ::core::ops::FnOnce(&'_q $Owner, &'outer_fn mut $Dependent<'_q>) -> Ret
         ) -> Ret {
             let (owner, dependent) = unsafe {
                     self.unsafe_self_cell.borrow_mut()
