@@ -27,7 +27,7 @@
 //! impl NewStructName {
 //!     fn new(
 //!         owner: Owner,
-//!         dependent_builder: impl for<'a> FnOnce(&'a Owner) -> Dependent<'a>
+//!         dependent_builder: impl for<'a> std::ops::FnOnce(&'a Owner) -> Dependent<'a>
 //!     ) -> NewStructName { ... }
 //!     fn borrow_owner<'a>(&'a self) -> &'a Owner { ... }
 //!     fn borrow_dependent<'a>(&'a self) -> &'a Dependent<'a> { ... }
@@ -191,21 +191,21 @@ pub mod unsafe_self_cell;
 /// ```ignore
 /// fn new(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> $Dependent<'a>
+///     dependent_builder: impl for<'a> std::ops::FnOnce(&'a $Owner) -> $Dependent<'a>
 /// ) -> Self
 /// ```
 ///
 /// ```ignore
 /// fn try_new<Err>(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+///     dependent_builder: impl for<'a> std::ops::FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
 /// ) -> Result<Self, Err>
 /// ```
 ///
 /// ```ignore
 /// fn try_new_or_recover<Err>(
 ///     owner: $Owner,
-///     dependent_builder: impl for<'a> FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
+///     dependent_builder: impl for<'a> std::ops::FnOnce(&'a $Owner) -> Result<$Dependent<'a>, Err>
 /// ) -> Result<Self, ($Owner, Err)>
 /// ```
 ///
@@ -223,14 +223,14 @@ pub mod unsafe_self_cell;
 /// ```ignore
 /// fn with_dependent<'outer_fn, Ret>(
 ///     &'outer_fn self,
-///     func: impl for<'a> FnOnce(&'a $Owner, &'outer_fn $Dependent<'a>
+///     func: impl for<'a> std::ops::FnOnce(&'a $Owner, &'outer_fn $Dependent<'a>
 /// ) -> Ret) -> Ret
 /// ```
 ///
 /// ```ignore
 /// fn with_dependent_mut<'outer_fn, Ret>(
 ///     &'outer_fn mut self,
-///     func: impl for<'a> FnOnce(&'a $Owner, &'outer_fn mut $Dependent<'a>) -> Ret
+///     func: impl for<'a> std::ops::FnOnce(&'a $Owner, &'outer_fn mut $Dependent<'a>) -> Ret
 /// ) -> Ret
 /// ```
 ///
@@ -345,9 +345,9 @@ macro_rules! self_cell {
         /// remains valid for the lifetime of the constructed struct.
         $Vis fn new(
             owner: $Owner,
-            dependent_builder: impl for<'_q> FnOnce(&'_q $Owner) -> $Dependent<'_q>
+            dependent_builder: impl for<'_q> std::ops::FnOnce(&'_q $Owner) -> $Dependent<'_q>
         ) -> Self {
-            use core::ptr::NonNull;
+            use ::core::ptr::NonNull;
 
             unsafe {
                 // All this has to happen here, because there is not good way
@@ -359,7 +359,7 @@ macro_rules! self_cell {
                 // capture additional references in `dependent_builder` and then
                 // return them as part of Dependent. Eg. it should be impossible
                 // to express: '_q should outlive 'x here `fn
-                // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> FnOnce(&'x
+                // bad<'_q>(outside_ref: &'_q String) -> impl for<'x> std::ops::FnOnce(&'x
                 // Owner) -> Dependent<'x>`.
 
                 type JoinedCell<'_q $(, $OwnerLifetime)?> =
@@ -383,7 +383,7 @@ macro_rules! self_cell {
 
                 // Initialize dependent with owner reference in final place.
                 dependent_ptr.write(dependent_builder(&*owner_ptr));
-                core::mem::forget(drop_guard);
+                ::core::mem::forget(drop_guard);
 
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -400,9 +400,9 @@ macro_rules! self_cell {
         $Vis fn try_new<Err>(
             owner: $Owner,
             dependent_builder:
-                impl for<'_q> FnOnce(&'_q $Owner) -> core::result::Result<$Dependent<'_q>, Err>
-        ) -> core::result::Result<Self, Err> {
-            use core::ptr::NonNull;
+                impl for<'_q> std::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
+        ) -> ::core::result::Result<Self, Err> {
+            use ::core::ptr::NonNull;
 
             unsafe {
                 // See fn new for more explanation.
@@ -427,18 +427,18 @@ macro_rules! self_cell {
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
                 match dependent_builder(&*owner_ptr) {
-                    Ok(dependent) => {
+                    ::core::result::Result::Ok(dependent) => {
                         dependent_ptr.write(dependent);
-                        core::mem::forget(drop_guard);
+                        ::core::mem::forget(drop_guard);
 
-                        Ok(Self {
+                        ::core::result::Result::Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
                             $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                         })
                     }
-                    Err(err) => Err(err)
+                    ::core::result::Result::Err(err) => ::core::result::Result::Err(err)
                 }
             }
         }
@@ -449,9 +449,9 @@ macro_rules! self_cell {
         $Vis fn try_new_or_recover<Err>(
             owner: $Owner,
             dependent_builder:
-                impl for<'_q> FnOnce(&'_q $Owner) -> core::result::Result<$Dependent<'_q>, Err>
-        ) -> core::result::Result<Self, ($Owner, Err)> {
-            use core::ptr::NonNull;
+                impl for<'_q> std::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
+        ) -> ::core::result::Result<Self, ($Owner, Err)> {
+            use ::core::ptr::NonNull;
 
             unsafe {
                 // See fn new for more explanation.
@@ -476,30 +476,30 @@ macro_rules! self_cell {
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
 
                 match dependent_builder(&*owner_ptr) {
-                    Ok(dependent) => {
+                    ::core::result::Result::Ok(dependent) => {
                         dependent_ptr.write(dependent);
-                        core::mem::forget(drop_guard);
+                        ::core::mem::forget(drop_guard);
 
-                        Ok(Self {
+                        ::core::result::Result::Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                                 joined_void_ptr,
                             ),
                             $(owner_marker: $crate::_covariant_owner_marker_ctor!($OwnerLifetime) ,)?
                         })
                     }
-                    Err(err) => {
+                    ::core::result::Result::Err(err) => {
                         // In contrast to into_owner ptr::read, here no dependent
                         // ever existed in this function and so we are sure its
                         // drop impl can't access owner after the read.
                         // And err can't return a reference to owner.
-                        let owner_on_err = core::ptr::read(owner_ptr);
+                        let owner_on_err = ::core::ptr::read(owner_ptr);
 
                         // Allowing drop_guard to finish would let it double free owner.
                         // So we dealloc the JoinedCell here manually.
-                        core::mem::forget(drop_guard);
+                        ::core::mem::forget(drop_guard);
                         $crate::alloc::alloc::dealloc(joined_void_ptr.as_ptr(), layout);
 
-                        Err((owner_on_err, err))
+                        ::core::result::Result::Err((owner_on_err, err))
                     }
                 }
             }
@@ -513,7 +513,7 @@ macro_rules! self_cell {
         /// Calls given closure `func` with a shared reference to dependent.
         $Vis fn with_dependent<'outer_fn, Ret>(
             &'outer_fn self,
-            func: impl for<'_q> FnOnce(&'_q $Owner, &'outer_fn $Dependent<'_q>
+            func: impl for<'_q> std::ops::FnOnce(&'_q $Owner, &'outer_fn $Dependent<'_q>
         ) -> Ret) -> Ret {
             unsafe {
                 func(
@@ -526,7 +526,7 @@ macro_rules! self_cell {
         /// Calls given closure `func` with an unique reference to dependent.
         $Vis fn with_dependent_mut<'outer_fn, Ret>(
             &'outer_fn mut self,
-            func: impl for<'_q> FnOnce(&'_q $Owner, &'outer_fn mut $Dependent<'_q>) -> Ret
+            func: impl for<'_q> std::ops::FnOnce(&'_q $Owner, &'outer_fn mut $Dependent<'_q>) -> Ret
         ) -> Ret {
             let (owner, dependent) = unsafe {
                     self.unsafe_self_cell.borrow_mut()
@@ -540,7 +540,7 @@ macro_rules! self_cell {
         /// Consumes `self` and returns the the owner.
         $Vis fn into_owner(self) -> $Owner {
             // This is only safe to do with repr(transparent).
-            let unsafe_self_cell = unsafe { core::mem::transmute::<
+            let unsafe_self_cell = unsafe { ::core::mem::transmute::<
                 Self,
                 $crate::unsafe_self_cell::UnsafeSelfCell<
                     $StructName$(<$OwnerLifetime>)?,
@@ -602,14 +602,14 @@ macro_rules! _covariant_owner_marker {
     (covariant, $OwnerLifetime:lifetime) => {
         // Ensure that contravariant owners don't imply covariance
         // over the dependent. See issue https://github.com/Voultapher/self_cell/issues/18
-        core::marker::PhantomData<&$OwnerLifetime ()>
+        ::core::marker::PhantomData<&$OwnerLifetime ()>
     };
     (not_covariant, $OwnerLifetime:lifetime) => {
         // See the discussion in https://github.com/Voultapher/self_cell/pull/29
         //
         // If the dependent is non_covariant, mark the owner as invariant over its
         // lifetime. Otherwise unsound use is possible.
-        core::marker::PhantomData<fn(&$OwnerLifetime ()) -> &$OwnerLifetime ()>
+        ::core::marker::PhantomData<fn(&$OwnerLifetime ()) -> &$OwnerLifetime ()>
     };
     ($x:ident, $OwnerLifetime:lifetime) => {
         compile_error!("This macro only accepts `covariant` or `not_covariant`");
@@ -621,7 +621,7 @@ macro_rules! _covariant_owner_marker {
 macro_rules! _covariant_owner_marker_ctor {
     ($OwnerLifetime:lifetime) => {
         // Helper to optionally expand into PhantomData for construction.
-        core::marker::PhantomData
+        ::core::marker::PhantomData
     };
 }
 
@@ -629,11 +629,11 @@ macro_rules! _covariant_owner_marker_ctor {
 #[macro_export]
 macro_rules! _impl_automatic_derive {
     (Debug, $StructName:ident) => {
-        impl core::fmt::Debug for $StructName {
+        impl ::core::fmt::Debug for $StructName {
             fn fmt(
                 &self,
-                fmt: &mut core::fmt::Formatter,
-            ) -> core::result::Result<(), core::fmt::Error> {
+                fmt: &mut ::core::fmt::Formatter,
+            ) -> ::core::result::Result<(), ::core::fmt::Error> {
                 self.with_dependent(|owner, dependent| {
                     fmt.debug_struct(stringify!($StructName))
                         .field("owner", owner)
@@ -644,7 +644,7 @@ macro_rules! _impl_automatic_derive {
         }
     };
     (PartialEq, $StructName:ident) => {
-        impl core::cmp::PartialEq for $StructName {
+        impl ::core::cmp::PartialEq for $StructName {
             fn eq(&self, other: &Self) -> bool {
                 *self.borrow_owner() == *other.borrow_owner()
             }
@@ -652,11 +652,11 @@ macro_rules! _impl_automatic_derive {
     };
     (Eq, $StructName:ident) => {
         // TODO this should only be allowed if owner is Eq.
-        impl core::cmp::Eq for $StructName {}
+        impl ::core::cmp::Eq for $StructName {}
     };
     (Hash, $StructName:ident) => {
-        impl core::hash::Hash for $StructName {
-            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        impl ::core::hash::Hash for $StructName {
+            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
                 self.borrow_owner().hash(state);
             }
         }
