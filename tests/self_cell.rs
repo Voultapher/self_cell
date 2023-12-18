@@ -55,7 +55,7 @@ impl PackedAst {
         self.ast_cell.borrow_owner()
     }
 
-    fn with_ast<'o>(&'o self, func: impl for<'a> FnOnce(&'a String, &'o Ast<'a>)) {
+    fn with_ast<'o>(&'o self, func: impl for<'a> std::ops::FnOnce(&'a String, &'o Ast<'a>)) {
         self.ast_cell.with_dependent(func)
     }
 
@@ -71,6 +71,32 @@ fn assert_with_ast(packed_ast: &PackedAst, expected_ast: &Ast) {
         visited = true;
     });
     assert!(visited);
+}
+
+// These are defined visible for the whole module. Because incorrect usage could affect many
+// components it is not isolated to a specific test.
+#[allow(non_snake_case, dead_code)]
+fn Ok<T>(_: T) -> ! {
+    panic!("Wrong Ok function called")
+}
+
+#[allow(non_snake_case, dead_code)]
+fn Err<T>(_: T) -> ! {
+    panic!("Wrong Err function called")
+}
+
+#[allow(dead_code)]
+struct FnOnce<T> {
+    marker: T,
+}
+
+mod core {
+    pub mod ptr {
+        #[allow(dead_code)]
+        pub const unsafe fn read<T>(_src: *const T) -> T {
+            panic!("Wrong ptr::read function called")
+        }
+    }
 }
 
 #[test]
@@ -139,7 +165,9 @@ fn failable_constructor_success() {
     let expected_ast = Ast::from(&owner);
 
     let ast_cell_result: Result<PackedAstCell, i32> =
-        PackedAstCell::try_new(owner.clone(), |owner| Ok(Ast::from(owner)));
+        PackedAstCell::try_new(owner.clone(), |owner| {
+            std::result::Result::Ok(Ast::from(owner))
+        });
 
     assert!(ast_cell_result.is_ok());
 
@@ -153,7 +181,7 @@ fn failable_constructor_fail() {
     let owner = String::from("This string is no trout");
 
     let ast_cell_result: Result<PackedAstCell, i32> =
-        PackedAstCell::try_new(owner.clone(), |_owner| Err(22));
+        PackedAstCell::try_new(owner.clone(), |_owner| std::result::Result::Err(22));
 
     assert!(ast_cell_result.is_err());
 
@@ -504,14 +532,15 @@ fn try_new_or_recover() {
 
     // bad path
     let (input, err) =
-        PackedAstCell::try_new_or_recover(original_input.clone(), |_| Err(-1)).unwrap_err();
+        PackedAstCell::try_new_or_recover(original_input.clone(), |_| std::result::Result::Err(-1))
+            .unwrap_err();
 
     assert_eq!(original_input, input);
     assert_eq!(err, -1);
 
     // happy path
     let cell = PackedAstCell::try_new_or_recover(original_input.clone(), |o| -> Result<_, ()> {
-        Ok(o.into())
+        std::result::Result::Ok(o.into())
     })
     .unwrap();
     assert_eq!(cell.borrow_owner(), &original_input);
@@ -567,14 +596,14 @@ fn zero_size_cell() {
 
     assert!(
         catch_unwind(|| ZeroSizeCell::try_new((), |_| -> Result<_, i32> {
-            Ok(ZeroSizeRef(PhantomData))
+            std::result::Result::Ok(ZeroSizeRef(PhantomData))
         }))
         .is_err()
     );
 
     assert!(catch_unwind(
         || ZeroSizeCell::try_new_or_recover((), |_| -> Result<_, i32> {
-            Ok(ZeroSizeRef(PhantomData))
+            std::result::Result::Ok(ZeroSizeRef(PhantomData))
         })
     )
     .is_err());
