@@ -243,7 +243,7 @@ fn catch_panic_in_from() {
     impl<'a> PanicCtor<'a> {
         fn new(_: &'a Owner) -> Self {
             let stack_vec = vec![23, 44, 5];
-            println!("{stack_vec:?}");
+            println!("{:?}", stack_vec);
             panic!()
         }
     }
