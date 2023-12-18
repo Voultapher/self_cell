@@ -16,7 +16,7 @@ use self_cell::self_cell;
 pub struct Ast<'input>(pub Vec<&'input str>);
 
 impl<'x> From<&'x String> for Ast<'x> {
-    fn from<'a>(body: &'a String) -> Ast<'a> {
+    fn from(body: &String) -> Ast<'_> {
         Ast(vec![&body[2..5], &body[1..3]])
     }
 }
@@ -51,7 +51,7 @@ impl PackedAst {
         }
     }
 
-    fn get_body<'a>(&'a self) -> &'a String {
+    fn get_body(&self) -> &String {
         self.ast_cell.borrow_owner()
     }
 
@@ -59,6 +59,7 @@ impl PackedAst {
         self.ast_cell.with_dependent(func)
     }
 
+    #[allow(clippy::needless_lifetimes)]
     fn get_ast<'a>(&'a self) -> &'a Ast<'a> {
         self.ast_cell.borrow_dependent()
     }
@@ -141,7 +142,7 @@ fn parse_ast() {
 
 fn make_ast_with_stripped_body(body: &str) -> PackedAst {
     // This is created on the stack.
-    let stripped_body = body.replace("\n", "");
+    let stripped_body = body.replace('\n', "");
     // Return Ast built from moved body, no lifetime hassle.
     PackedAst::new(stripped_body)
 }
@@ -149,7 +150,7 @@ fn make_ast_with_stripped_body(body: &str) -> PackedAst {
 #[test]
 fn return_self_ref_struct() {
     let body = String::from("a\nb\nc\ndef");
-    let expected_body = body.replace("\n", "");
+    let expected_body = body.replace('\n', "");
 
     // expected_ast is on the stack and lifetime dependent on body.
     let expected_ast = Ast::from(&expected_body);
@@ -241,7 +242,8 @@ fn catch_panic_in_from() {
 
     impl<'a> PanicCtor<'a> {
         fn new(_: &'a Owner) -> Self {
-            let _stack_vec = vec![23, 44, 5];
+            let stack_vec = vec![23, 44, 5];
+            println!("{stack_vec:?}");
             panic!()
         }
     }
@@ -261,7 +263,7 @@ fn catch_panic_in_from() {
     let owner = Owner("This string is no trout".into());
 
     let ast_cell_result = NoLeakCell::try_new(owner.clone(), |owner| {
-        catch_unwind(|| PanicCtor::new(&owner))
+        catch_unwind(|| PanicCtor::new(owner))
     });
     assert!(ast_cell_result.is_err());
 }

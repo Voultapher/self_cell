@@ -1,3 +1,5 @@
+#![allow(clippy::needless_lifetimes)]
+
 use core::marker::PhantomData;
 use core::mem;
 use core::ptr::{drop_in_place, read, NonNull};
