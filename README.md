@@ -34,6 +34,9 @@ impl NewStructName {
     ) -> NewStructName { ... }
     fn borrow_owner<'a>(&'a self) -> &'a Owner { ... }
     fn borrow_dependent<'a>(&'a self) -> &'a Dependent<'a> { ... }
+    [...]
+    // See the macro level documentation for a list of all generated functions
+    // https://docs.rs/self_cell/latest/self_cell/macro.self_cell.html#generated-api.
 }
 
 impl Debug for NewStructName { ... }
