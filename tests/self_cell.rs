@@ -783,24 +783,17 @@ fn cell_mem_size() {
 }
 
 #[test]
-#[should_panic]
 fn mut_borrow_new_borrow() {
-    let mut_borrow = MutBorrow::new(45);
-    let _ = mut_borrow.borrow_mut();
+    let mut_borrow = MutBorrow::new("abc".to_string());
+
+    let string_ref: &mut String = mut_borrow.borrow_mut();
+    string_ref.pop();
+    assert_eq!(string_ref, "ab");
 }
 
 #[test]
 fn mut_borrow_mutate() {
-    let mut mut_borrow = MutBorrow::new(45);
-
-    unsafe {
-        let wrapper = std::mem::transmute::<
-            &mut MutBorrow<i32>,
-            &mut self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
-        >(&mut mut_borrow);
-
-        wrapper.unlock();
-    }
+    let mut_borrow = MutBorrow::new(45);
 
     let mut_ref: &mut i32 = mut_borrow.borrow_mut();
 
@@ -812,16 +805,7 @@ fn mut_borrow_mutate() {
 #[test]
 #[should_panic]
 fn mut_borrow_double_borrow() {
-    let mut mut_borrow = MutBorrow::new(45);
-
-    unsafe {
-        let wrapper = std::mem::transmute::<
-            &mut MutBorrow<i32>,
-            &mut self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
-        >(&mut mut_borrow);
-
-        wrapper.unlock();
-    }
+    let mut_borrow = MutBorrow::new(45);
 
     let _mut_ref_a: &mut i32 = mut_borrow.borrow_mut();
     let _mut_ref_b: &mut i32 = mut_borrow.borrow_mut();
@@ -830,16 +814,7 @@ fn mut_borrow_double_borrow() {
 #[test]
 #[should_panic]
 fn mut_borrow_lock_borrow() {
-    let mut mut_borrow = MutBorrow::new(45);
-
-    unsafe {
-        let wrapper = std::mem::transmute::<
-            &mut MutBorrow<i32>,
-            &mut self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
-        >(&mut mut_borrow);
-
-        wrapper.unlock();
-    }
+    let mut_borrow = MutBorrow::new(45);
 
     {
         let wrapper = unsafe {

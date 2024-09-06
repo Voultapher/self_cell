@@ -385,8 +385,6 @@ macro_rules! self_cell {
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
 
-                $crate::_mut_borrow_unlock!(owner_ptr, $Owner);
-
                 // Drop guard that cleans up should building the dependent panic.
                 let drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
@@ -436,8 +434,6 @@ macro_rules! self_cell {
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
-
-                $crate::_mut_borrow_unlock!(owner_ptr, $Owner);
 
                 // Drop guard that cleans up should building the dependent panic.
                 let mut drop_guard =
@@ -492,8 +488,6 @@ macro_rules! self_cell {
 
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
-
-                $crate::_mut_borrow_unlock!(owner_ptr, $Owner);
 
                 // Drop guard that cleans up should building the dependent panic.
                 let mut drop_guard =
@@ -693,20 +687,6 @@ macro_rules! _impl_automatic_derive {
             stringify!($x)
         ));
     };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _mut_borrow_unlock {
-    ($owner_ptr:expr, $Owner:ty) => {{
-        let wrapper = ::core::mem::transmute::<
-            &mut $Owner,
-            &mut $crate::unsafe_self_cell::MutBorrowSpecWrapper<$Owner>,
-        >(&mut *$owner_ptr);
-
-        // If `T` is `MutBorrow` will call `unlock`, otherwise a no-op.
-        wrapper.unlock();
-    }};
 }
 
 #[doc(hidden)]
