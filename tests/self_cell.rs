@@ -10,7 +10,7 @@ use std::str;
 
 use once_cell::unsync::OnceCell;
 
-use self_cell::self_cell;
+use self_cell::{self_cell, MutBorrow};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Ast<'input>(pub Vec<&'input str>);
@@ -237,6 +237,7 @@ fn catch_panic_in_from() {
     #[derive(Debug, Clone, PartialEq)]
     struct Owner(String);
 
+    #[allow(dead_code)]
     #[derive(Debug)]
     struct PanicCtor<'a>(&'a i32);
 
@@ -351,6 +352,7 @@ fn drop_order() {
     }
 
     struct Owner(Rc<RefCell<Vec<Dropped>>>);
+    #[allow(dead_code)]
     struct Dependent<'a>(&'a Owner, Rc<RefCell<Vec<Dropped>>>);
 
     impl Drop for Owner {
@@ -688,6 +690,7 @@ fn result_name_hygiene() {
     #[allow(dead_code)]
     type Result<T> = std::result::Result<T, ()>;
 
+    #[allow(dead_code)]
     type VecRef<'a> = &'a Vec<u8>;
 
     self_cell!(
@@ -777,4 +780,217 @@ fn cell_mem_size() {
 
     assert_eq!(size_of::<PackedAstCell>(), size_of::<*const u8>());
     assert_eq!(size_of::<Option<PackedAstCell>>(), size_of::<*const u8>());
+}
+
+#[test]
+#[should_panic]
+fn mut_borrow_new_borrow() {
+    let mut_borrow = MutBorrow::new(45);
+    let _ = mut_borrow.borrow_mut();
+}
+
+#[test]
+fn mut_borrow_mutate() {
+    let mut mut_borrow = MutBorrow::new(45);
+
+    unsafe {
+        let wrapper = std::mem::transmute::<
+            &mut MutBorrow<i32>,
+            &mut self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
+        >(&mut mut_borrow);
+
+        wrapper.unlock();
+    }
+
+    let mut_ref: &mut i32 = mut_borrow.borrow_mut();
+
+    *mut_ref = 789;
+
+    assert_eq!(mut_borrow.into_inner(), 789);
+}
+
+#[test]
+#[should_panic]
+fn mut_borrow_double_borrow() {
+    let mut mut_borrow = MutBorrow::new(45);
+
+    unsafe {
+        let wrapper = std::mem::transmute::<
+            &mut MutBorrow<i32>,
+            &mut self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
+        >(&mut mut_borrow);
+
+        wrapper.unlock();
+    }
+
+    let _mut_ref_a: &mut i32 = mut_borrow.borrow_mut();
+    let _mut_ref_b: &mut i32 = mut_borrow.borrow_mut();
+}
+
+#[test]
+#[should_panic]
+fn mut_borrow_lock_borrow() {
+    let mut mut_borrow = MutBorrow::new(45);
+
+    unsafe {
+        let wrapper = std::mem::transmute::<
+            &mut MutBorrow<i32>,
+            &mut self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
+        >(&mut mut_borrow);
+
+        wrapper.unlock();
+    }
+
+    {
+        let wrapper = unsafe {
+            std::mem::transmute::<
+                &MutBorrow<i32>,
+                &self_cell::unsafe_self_cell::MutBorrowSpecWrapper<MutBorrow<i32>>,
+            >(&mut_borrow)
+        };
+
+        wrapper.lock();
+    }
+
+    let _: &mut i32 = mut_borrow.borrow_mut();
+}
+
+type MutStringRef<'a> = &'a mut String;
+
+self_cell!(
+    struct MutStringCell {
+        owner: MutBorrow<String>,
+
+        #[covariant]
+        dependent: MutStringRef,
+    }
+);
+
+#[test]
+fn mut_borrow_new() {
+    let mut cell = MutStringCell::new(MutBorrow::new("abc".into()), |owner| owner.borrow_mut());
+
+    let _ = cell.borrow_owner();
+
+    assert_eq!(cell.borrow_dependent(), &"abc");
+
+    cell.with_dependent(|_owner, dependent| {
+        assert_eq!(dependent, &"abc");
+    });
+
+    cell.with_dependent_mut(|_owner, dependent| {
+        assert_eq!(dependent, &"abc");
+        dependent.pop();
+        assert_eq!(dependent, &"ab");
+    });
+
+    assert_eq!(cell.into_owner().into_inner(), "ab");
+}
+
+#[test]
+fn mut_borrow_try_new() {
+    let mut cell = MutStringCell::try_new(
+        MutBorrow::new("abc".into()),
+        |owner| -> Result<&mut String, ()> { std::result::Result::Ok(owner.borrow_mut()) },
+    )
+    .unwrap();
+
+    cell.with_dependent_mut(|_owner, dependent| {
+        dependent.pop();
+    });
+
+    assert_eq!(cell.into_owner().into_inner(), "ab");
+
+    let res = MutStringCell::try_new(MutBorrow::new("wxyz".into()), |_owner| {
+        std::result::Result::Err(678)
+    });
+    let err: i32 = match res {
+        std::result::Result::Ok(_) => {
+            unreachable!()
+        }
+        std::result::Result::Err(err) => err,
+    };
+
+    assert_eq!(err, 678);
+}
+
+#[test]
+fn mut_borrow_try_new_or_recover() {
+    let mut cell = MutStringCell::try_new_or_recover(
+        MutBorrow::new("abc".into()),
+        |owner| -> Result<&mut String, ()> { std::result::Result::Ok(owner.borrow_mut()) },
+    )
+    .map_err(|(_owner, err)| err)
+    .unwrap();
+
+    cell.with_dependent_mut(|_owner, dependent| {
+        dependent.pop();
+    });
+
+    assert_eq!(cell.into_owner().into_inner(), "ab");
+
+    let res = MutStringCell::try_new_or_recover(MutBorrow::new("wxyz".into()), |_owner| {
+        std::result::Result::Err(678)
+    });
+    let (owner, err): (MutBorrow<String>, i32) = match res {
+        std::result::Result::Ok(_) => {
+            unreachable!()
+        }
+        std::result::Result::Err(err) => err,
+    };
+
+    assert_eq!(owner.into_inner(), "wxyz");
+    assert_eq!(err, 678);
+}
+
+type MutBorrowStringRef<'a> = &'a MutBorrow<String>;
+
+self_cell!(
+    struct MutStringFullBorrowCell {
+        owner: MutBorrow<String>,
+
+        #[covariant]
+        dependent: MutBorrowStringRef,
+    }
+);
+
+#[test]
+#[should_panic]
+fn mut_borrow_new_borrow_mut() {
+    let cell = MutStringCell::new(MutBorrow::new("abc".into()), |owner| owner.borrow_mut());
+
+    cell.borrow_owner().borrow_mut();
+}
+
+#[test]
+#[should_panic]
+fn mut_borrow_new_late_borrow_mut() {
+    let cell = MutStringFullBorrowCell::new(MutBorrow::new("abc".into()), |owner| owner);
+
+    cell.borrow_owner().borrow_mut();
+}
+
+#[test]
+#[should_panic]
+fn mut_borrow_try_new_late_borrow_mut() {
+    let cell = MutStringFullBorrowCell::try_new(
+        MutBorrow::new("abc".into()),
+        |owner| -> Result<MutBorrowStringRef, ()> { std::result::Result::Ok(owner) },
+    )
+    .unwrap();
+
+    cell.borrow_owner().borrow_mut();
+}
+
+#[test]
+#[should_panic]
+fn mut_borrow_try_new_or_recover_late_borrow_mut() {
+    let cell = MutStringFullBorrowCell::try_new_or_recover(
+        MutBorrow::new("abc".into()),
+        |owner| -> Result<MutBorrowStringRef, ()> { std::result::Result::Ok(owner) },
+    )
+    .map_err(|(_owner, err)| err)
+    .unwrap();
+
+    cell.borrow_owner().borrow_mut();
 }

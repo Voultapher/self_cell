@@ -1,5 +1,6 @@
 #![allow(clippy::needless_lifetimes)]
 
+use core::cell::{Cell, UnsafeCell};
 use core::marker::PhantomData;
 use core::mem;
 use core::ptr::{drop_in_place, read, NonNull};
@@ -221,5 +222,128 @@ impl<Owner, Dependent> JoinedCell<Owner, Dependent> {
         let dependent_ptr = &mut (*this).dependent as *mut Dependent;
 
         (owner_ptr, dependent_ptr)
+    }
+}
+
+/// Wrapper type that allows creating a self-referential type that hold a mutable borrow `&mut T`.
+///
+/// Example usage:
+///
+/// ```
+/// use self_cell::{self_cell, MutBorrow};
+///
+/// type MutStringRef<'a> = &'a mut String;
+///
+/// self_cell!(
+///     struct MutStringCell {
+///         owner: MutBorrow<String>,
+///
+///         #[covariant]
+///         dependent: MutStringRef,
+///     }
+/// );
+///
+/// let mut cell = MutStringCell::new(MutBorrow::new("abc".into()), |owner| owner.borrow_mut());
+/// cell.with_dependent_mut(|_owner, dependent| {
+///     assert_eq!(dependent, &"abc");
+///     dependent.pop();
+///     assert_eq!(dependent, &"ab");
+/// });
+///
+/// let recovered_owner: String = cell.into_owner().into_inner();
+/// assert_eq!(recovered_owner, "ab");
+/// ```
+pub struct MutBorrow<T> {
+    // Private on purpose.
+    is_locked: Cell<bool>,
+    value: UnsafeCell<T>,
+}
+
+impl<T> MutBorrow<T> {
+    /// Constructs a new `MutBorrow`.
+    pub fn new(value: T) -> Self {
+        Self {
+            is_locked: Cell::new(true),
+            value: UnsafeCell::new(value),
+        }
+    }
+
+    /// Obtains a mutable reference to the underlying data.
+    ///
+    /// This function can only sensibly be used in the builder function. Afterwards, it's impossible
+    /// to access the inner value, with the exception of [`MutBorrow::into_inner`].
+    ///
+    /// # Panics
+    ///
+    /// Will panic if called anywhere but in the dependent constructor. Will also panic if called
+    /// more than once.
+    pub fn borrow_mut(&self) -> &mut T {
+        if self.is_locked.get() {
+            panic!("Tried to access locked MutBorrow")
+        } else {
+            // Ensure this function can only be called once.
+            self.is_locked.set(true);
+
+            // SAFETY: `self.is_locked` starts out as locked and can only be unlocked with `unsafe`
+            // functions, which guarantees that this function can only be called once. And the
+            // `self.value` being private ensures that there are no other references to it.
+            unsafe { &mut *self.value.get() }
+        }
+    }
+
+    /// Consumes `self` and returns the wrapped value.
+    pub fn into_inner(self) -> T {
+        self.value.into_inner()
+    }
+}
+
+// Provides the no-op for types that are not `MutBorrow`.
+#[doc(hidden)]
+pub unsafe trait MutBorrowDefaultTrait {
+    #[doc(hidden)]
+    unsafe fn unlock(&mut self) {}
+
+    #[doc(hidden)]
+    fn lock(&self) {}
+}
+
+unsafe impl<T> MutBorrowDefaultTrait for T {}
+
+#[doc(hidden)]
+#[repr(transparent)]
+pub struct MutBorrowSpecWrapper<T>(T);
+
+impl<T: MutBorrowSpecImpl> MutBorrowSpecWrapper<T> {
+    #[doc(hidden)]
+    pub unsafe fn unlock(&mut self) {
+        <T as MutBorrowSpecImpl>::unlock(&mut self.0);
+    }
+
+    #[doc(hidden)]
+    pub fn lock(&self) {
+        <T as MutBorrowSpecImpl>::lock(&self.0);
+    }
+}
+
+// unsafe trait to make sure users can't impl this without unsafe.
+#[doc(hidden)]
+pub unsafe trait MutBorrowSpecImpl {
+    #[doc(hidden)]
+    unsafe fn unlock(&mut self);
+
+    #[doc(hidden)]
+    fn lock(&self);
+}
+
+unsafe impl<T> MutBorrowSpecImpl for MutBorrow<T> {
+    // SAFETY: The caller MUST only ever call this once.
+    #[doc(hidden)]
+    unsafe fn unlock(&mut self) {
+        self.is_locked.set(false);
+    }
+
+    #[doc(hidden)]
+    fn lock(&self) {
+        self.is_locked.set(true);
     }
 }

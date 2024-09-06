@@ -41,8 +41,8 @@
 //!
 //! Self-referential structs are currently not supported with safe vanilla Rust.
 //! The only reasonable safe alternative is to have the user juggle 2 separate
-//! data structures which is a mess. The library solution ouroboros is really
-//! expensive to compile due to its use of procedural macros.
+//! data structures which is a mess. The library solution ouroboros is expensive
+//! to compile due to its use of procedural macros.
 //!
 //! This alternative is `no_std`, uses no proc-macros, some self contained
 //! unsafe and works on stable Rust, and is miri tested. With a total of less
@@ -137,6 +137,8 @@
 //!
 //! - [How to build a lazy AST with
 //!   self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
+//!
+//! - [How to handle dependents that take a mutable reference](https://github.com/Voultapher/self_cell/tree/main/examples/mut_ref_to_owner_in_builder) see also [`MutBorrow`]
 //!
 //! - [How to use an owner type with
 //!     lifetime](https://github.com/Voultapher/self_cell/tree/main/examples/owner_with_lifetime)
@@ -352,6 +354,9 @@ macro_rules! self_cell {
         ) -> Self {
             use ::core::ptr::NonNull;
 
+            #[allow(unused)]
+            use $crate::unsafe_self_cell::MutBorrowDefaultTrait;
+
             unsafe {
                 // All this has to happen here, because there is not good way
                 // of passing the appropriate logic into UnsafeSelfCell::new
@@ -380,6 +385,8 @@ macro_rules! self_cell {
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
 
+                $crate::_mut_borrow_unlock!(owner_ptr, $Owner);
+
                 // Drop guard that cleans up should building the dependent panic.
                 let drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
@@ -387,6 +394,8 @@ macro_rules! self_cell {
                 // Initialize dependent with owner reference in final place.
                 dependent_ptr.write(dependent_builder(&*owner_ptr));
                 ::core::mem::forget(drop_guard);
+
+                $crate::_mut_borrow_lock!(owner_ptr, $Owner);
 
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -407,6 +416,9 @@ macro_rules! self_cell {
         ) -> ::core::result::Result<Self, Err> {
             use ::core::ptr::NonNull;
 
+            #[allow(unused)]
+            use $crate::unsafe_self_cell::MutBorrowDefaultTrait;
+
             unsafe {
                 // See fn new for more explanation.
 
@@ -425,6 +437,8 @@ macro_rules! self_cell {
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
 
+                $crate::_mut_borrow_unlock!(owner_ptr, $Owner);
+
                 // Drop guard that cleans up should building the dependent panic.
                 let mut drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
@@ -433,6 +447,8 @@ macro_rules! self_cell {
                     ::core::result::Result::Ok(dependent) => {
                         dependent_ptr.write(dependent);
                         ::core::mem::forget(drop_guard);
+
+                        $crate::_mut_borrow_lock!(owner_ptr, $Owner);
 
                         ::core::result::Result::Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -456,6 +472,9 @@ macro_rules! self_cell {
         ) -> ::core::result::Result<Self, ($Owner, Err)> {
             use ::core::ptr::NonNull;
 
+            #[allow(unused)]
+            use $crate::unsafe_self_cell::MutBorrowDefaultTrait;
+
             unsafe {
                 // See fn new for more explanation.
 
@@ -474,6 +493,8 @@ macro_rules! self_cell {
                 // Move owner into newly allocated space.
                 owner_ptr.write(owner);
 
+                $crate::_mut_borrow_unlock!(owner_ptr, $Owner);
+
                 // Drop guard that cleans up should building the dependent panic.
                 let mut drop_guard =
                     $crate::unsafe_self_cell::OwnerAndCellDropGuard::new(joined_ptr);
@@ -482,6 +503,8 @@ macro_rules! self_cell {
                     ::core::result::Result::Ok(dependent) => {
                         dependent_ptr.write(dependent);
                         ::core::mem::forget(drop_guard);
+
+                        $crate::_mut_borrow_lock!(owner_ptr, $Owner);
 
                         ::core::result::Result::Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -671,3 +694,33 @@ macro_rules! _impl_automatic_derive {
         ));
     };
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _mut_borrow_unlock {
+    ($owner_ptr:expr, $Owner:ty) => {{
+        let wrapper = std::mem::transmute::<
+            &mut $Owner,
+            &mut $crate::unsafe_self_cell::MutBorrowSpecWrapper<$Owner>,
+        >(&mut *$owner_ptr);
+
+        // If `T` is `MutBorrow` will call `unlock`, otherwise a no-op.
+        wrapper.unlock();
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _mut_borrow_lock {
+    ($owner_ptr:expr, $Owner:ty) => {{
+        let wrapper = std::mem::transmute::<
+            &$Owner,
+            &$crate::unsafe_self_cell::MutBorrowSpecWrapper<$Owner>,
+        >(&*$owner_ptr);
+
+        // If `T` is `MutBorrow` will call `lock`, otherwise a no-op.
+        wrapper.lock();
+    }};
+}
+
+pub use unsafe_self_cell::MutBorrow;
