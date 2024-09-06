@@ -699,7 +699,7 @@ macro_rules! _impl_automatic_derive {
 #[macro_export]
 macro_rules! _mut_borrow_unlock {
     ($owner_ptr:expr, $Owner:ty) => {{
-        let wrapper = std::mem::transmute::<
+        let wrapper = ::core::mem::transmute::<
             &mut $Owner,
             &mut $crate::unsafe_self_cell::MutBorrowSpecWrapper<$Owner>,
         >(&mut *$owner_ptr);
@@ -713,7 +713,7 @@ macro_rules! _mut_borrow_unlock {
 #[macro_export]
 macro_rules! _mut_borrow_lock {
     ($owner_ptr:expr, $Owner:ty) => {{
-        let wrapper = std::mem::transmute::<
+        let wrapper = ::core::mem::transmute::<
             &$Owner,
             &$crate::unsafe_self_cell::MutBorrowSpecWrapper<$Owner>,
         >(&*$owner_ptr);
