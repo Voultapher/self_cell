@@ -1,9 +1,10 @@
 #![allow(clippy::needless_lifetimes)]
 
-use core::cell::{Cell, UnsafeCell};
+use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use core::mem;
 use core::ptr::{drop_in_place, read, NonNull};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 extern crate alloc;
 
@@ -255,7 +256,7 @@ impl<Owner, Dependent> JoinedCell<Owner, Dependent> {
 /// ```
 pub struct MutBorrow<T> {
     // Private on purpose.
-    is_locked: Cell<bool>,
+    is_locked: AtomicBool,
     value: UnsafeCell<T>,
 }
 
@@ -265,7 +266,7 @@ impl<T> MutBorrow<T> {
         // Use the Rust type system to model an affine type that can only go from unlocked -> locked
         // but never the other way around.
         Self {
-            is_locked: Cell::new(false),
+            is_locked: AtomicBool::new(false),
             value: UnsafeCell::new(value),
         }
     }
@@ -280,12 +281,14 @@ impl<T> MutBorrow<T> {
     /// Will panic if called anywhere but in the dependent constructor. Will also panic if called
     /// more than once.
     pub fn borrow_mut(&self) -> &mut T {
-        if self.is_locked.get() {
+        // Ensure this function can only be called once.
+        // Relaxed should be fine, because only one thread could ever read `false` anyway,
+        // so further synchronization is pointless.
+        let was_locked = self.is_locked.swap(true, Ordering::Relaxed);
+
+        if was_locked {
             panic!("Tried to access locked MutBorrow")
         } else {
-            // Ensure this function can only be called once.
-            self.is_locked.set(true);
-
             // SAFETY: `self.is_locked` starts out as locked and can never be unlocked again, which
             // guarantees that this function can only be called once. And the `self.value` being
             // private ensures that there are no other references to it.
@@ -299,36 +302,10 @@ impl<T> MutBorrow<T> {
     }
 }
 
-// Provides the no-op for types that are not `MutBorrow`.
-#[doc(hidden)]
-pub unsafe trait MutBorrowDefaultTrait {
-    #[doc(hidden)]
-    fn lock(&self) {}
-}
-
-unsafe impl<T> MutBorrowDefaultTrait for T {}
-
-#[doc(hidden)]
-#[repr(transparent)]
-pub struct MutBorrowSpecWrapper<T>(T);
-
-impl<T: MutBorrowSpecImpl> MutBorrowSpecWrapper<T> {
-    #[doc(hidden)]
-    pub fn lock(&self) {
-        <T as MutBorrowSpecImpl>::lock(&self.0);
-    }
-}
-
-// unsafe trait to make sure users can't impl this without unsafe.
-#[doc(hidden)]
-pub unsafe trait MutBorrowSpecImpl {
-    #[doc(hidden)]
-    fn lock(&self);
-}
-
-unsafe impl<T> MutBorrowSpecImpl for MutBorrow<T> {
-    #[doc(hidden)]
-    fn lock(&self) {
-        self.is_locked.set(true);
-    }
-}
+// SAFETY: The reasoning why it is safe to share `MutBorrow` across threads is as follows: The
+// `AtomicBool` `is_locked` ensures that only ever exactly one thread can get access to the inner
+// value. In that sense it works like a critical section, that begins when `borrow_mut()` is called
+// and that ends when the outer `MutBorrow` is dropped. Once one thread acquired the unique
+// reference through `borrow_mut()` no other interaction with the inner value MUST ever be possible
+// while the outer `MutBorrow` is alive.
+unsafe impl<T: Send> Sync for MutBorrow<T> {}

@@ -354,9 +354,6 @@ macro_rules! self_cell {
         ) -> Self {
             use ::core::ptr::NonNull;
 
-            #[allow(unused)]
-            use $crate::unsafe_self_cell::MutBorrowDefaultTrait;
-
             unsafe {
                 // All this has to happen here, because there is not good way
                 // of passing the appropriate logic into UnsafeSelfCell::new
@@ -393,8 +390,6 @@ macro_rules! self_cell {
                 dependent_ptr.write(dependent_builder(&*owner_ptr));
                 ::core::mem::forget(drop_guard);
 
-                $crate::_mut_borrow_lock!(owner_ptr, $Owner);
-
                 Self {
                     unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
                         joined_void_ptr,
@@ -413,9 +408,6 @@ macro_rules! self_cell {
                 impl for<'_q> ::core::ops::FnOnce(&'_q $Owner) -> ::core::result::Result<$Dependent<'_q>, Err>
         ) -> ::core::result::Result<Self, Err> {
             use ::core::ptr::NonNull;
-
-            #[allow(unused)]
-            use $crate::unsafe_self_cell::MutBorrowDefaultTrait;
 
             unsafe {
                 // See fn new for more explanation.
@@ -443,8 +435,6 @@ macro_rules! self_cell {
                     ::core::result::Result::Ok(dependent) => {
                         dependent_ptr.write(dependent);
                         ::core::mem::forget(drop_guard);
-
-                        $crate::_mut_borrow_lock!(owner_ptr, $Owner);
 
                         ::core::result::Result::Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -468,9 +458,6 @@ macro_rules! self_cell {
         ) -> ::core::result::Result<Self, ($Owner, Err)> {
             use ::core::ptr::NonNull;
 
-            #[allow(unused)]
-            use $crate::unsafe_self_cell::MutBorrowDefaultTrait;
-
             unsafe {
                 // See fn new for more explanation.
 
@@ -497,8 +484,6 @@ macro_rules! self_cell {
                     ::core::result::Result::Ok(dependent) => {
                         dependent_ptr.write(dependent);
                         ::core::mem::forget(drop_guard);
-
-                        $crate::_mut_borrow_lock!(owner_ptr, $Owner);
 
                         ::core::result::Result::Ok(Self {
                             unsafe_self_cell: $crate::unsafe_self_cell::UnsafeSelfCell::new(
@@ -687,20 +672,6 @@ macro_rules! _impl_automatic_derive {
             stringify!($x)
         ));
     };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _mut_borrow_lock {
-    ($owner_ptr:expr, $Owner:ty) => {{
-        let wrapper = ::core::mem::transmute::<
-            &$Owner,
-            &$crate::unsafe_self_cell::MutBorrowSpecWrapper<$Owner>,
-        >(&*$owner_ptr);
-
-        // If `T` is `MutBorrow` will call `lock`, otherwise a no-op.
-        wrapper.lock();
-    }};
 }
 
 pub use unsafe_self_cell::MutBorrow;

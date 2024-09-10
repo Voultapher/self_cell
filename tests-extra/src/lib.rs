@@ -1,15 +1,14 @@
-#![allow(dead_code)]
 #![allow(unused_imports)]
 
-use std::fs;
-use std::process::Command;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str;
 
 use crossbeam_utils::thread;
 
 use impls::impls;
 
-use self_cell::self_cell;
+use self_cell::{self_cell, MutBorrow};
 
 #[allow(dead_code)]
 struct NotSend<'a> {
@@ -53,6 +52,35 @@ fn not_sync() {
     assert!(impls!(String: Sync));
     assert!(!impls!(NotSend: Sync));
     assert!(!impls!(NotSendCell: Sync));
+}
+
+#[test]
+fn mut_borrow_traits() {
+    type MutBorrowString = MutBorrow<String>;
+    assert!(impls!(MutBorrowString: Send));
+    assert!(impls!(MutBorrowString: Sync));
+
+    type MutBorrowRefCellString = MutBorrow<RefCell<String>>;
+    assert!(impls!(MutBorrowRefCellString: Send));
+    assert!(impls!(MutBorrowRefCellString: Sync));
+
+    type MutBorrowRcString = MutBorrow<Rc<String>>;
+    assert!(!impls!(MutBorrowRcString: Send));
+    assert!(!impls!(MutBorrowRcString: Sync));
+
+    type MutStringRef<'a> = &'a mut String;
+
+    self_cell!(
+        struct MutBorrowStringCell {
+            owner: MutBorrow<String>,
+
+            #[covariant]
+            dependent: MutStringRef,
+        }
+    );
+
+    assert!(impls!(MutBorrowStringCell: Send));
+    assert!(impls!(MutBorrowStringCell: Sync));
 }
 
 #[test]
