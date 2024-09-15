@@ -44,8 +44,8 @@ impl Debug for NewStructName { ... }
 
 Self-referential structs are currently not supported with safe vanilla Rust. The
 only reasonable safe alternative is to expect the user to juggle 2 separate data
-structures which is a mess. The library solution ouroboros is really expensive
-to compile due to its use of procedural macros.
+structures which is a mess. The library solution ouroboros is expensive to
+compile due to its use of procedural macros.
 
 This alternative is `no_std`, uses no proc-macros, some self contained unsafe
 and works on stable Rust, and is miri tested. With a total of less than 300

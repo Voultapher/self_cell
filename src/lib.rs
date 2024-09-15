@@ -41,8 +41,8 @@
 //!
 //! Self-referential structs are currently not supported with safe vanilla Rust.
 //! The only reasonable safe alternative is to have the user juggle 2 separate
-//! data structures which is a mess. The library solution ouroboros is really
-//! expensive to compile due to its use of procedural macros.
+//! data structures which is a mess. The library solution ouroboros is expensive
+//! to compile due to its use of procedural macros.
 //!
 //! This alternative is `no_std`, uses no proc-macros, some self contained
 //! unsafe and works on stable Rust, and is miri tested. With a total of less
@@ -137,6 +137,8 @@
 //!
 //! - [How to build a lazy AST with
 //!   self_cell](https://github.com/Voultapher/self_cell/tree/main/examples/lazy_ast)
+//!
+//! - [How to handle dependents that take a mutable reference](https://github.com/Voultapher/self_cell/tree/main/examples/mut_ref_to_owner_in_builder) see also [`MutBorrow`]
 //!
 //! - [How to use an owner type with
 //!     lifetime](https://github.com/Voultapher/self_cell/tree/main/examples/owner_with_lifetime)
@@ -671,3 +673,5 @@ macro_rules! _impl_automatic_derive {
         ));
     };
 }
+
+pub use unsafe_self_cell::MutBorrow;
