@@ -1,4 +1,4 @@
-#![allow(clippy::needless_lifetimes)]
+#![allow(clippy::missing_safety_doc, clippy::needless_lifetimes)]
 
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
@@ -280,6 +280,7 @@ impl<T> MutBorrow<T> {
     ///
     /// Will panic if called anywhere but in the dependent constructor. Will also panic if called
     /// more than once.
+    #[allow(clippy::mut_from_ref)]
     pub fn borrow_mut(&self) -> &mut T {
         // Ensure this function can only be called once.
         // Relaxed should be fine, because only one thread could ever read `false` anyway,
