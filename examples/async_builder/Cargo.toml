@@ -1,5 +1,5 @@
 [package]
-name = "owner_with_lifetime"
+name = "async_builder"
 version = "0.1.0"
 authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
 edition = "2018"
@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 self_cell = { path = "../../" }
+smol = { version = "2.0", default-features = false }

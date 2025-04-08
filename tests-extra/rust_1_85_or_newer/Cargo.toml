@@ -1,0 +1,12 @@
+[package]
+name = "rust_1_85_or_newer"
+version = "0.1.0"
+authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
+edition = "2024"
+
+[lib]
+doctest = false
+
+[dependencies]
+self_cell = { path = "../.." }
+smol = { version = "2.0", default-features = false }
