@@ -2,9 +2,9 @@
 name = "async_builder"
 version = "0.1.0"
 authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# Not part of workspace because it requires a newer Rust.
 
 [dependencies]
 self_cell = { path = "../../" }

@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "async_builder",
     "fallible_dependent_construction",
     "lazy_ast",
     "mut_ref_to_owner_in_builder",
     "owner_with_lifetime",
 ]
+exclude = ["async_builder"]
