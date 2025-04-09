@@ -8,6 +8,7 @@ enum NameParseError {
     TooLong,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct Name<'a>(&'a str);
 
@@ -27,8 +28,7 @@ impl<'a> TryFrom<&'a str> for Name<'a> {
     }
 }
 
-#[derive(Debug)]
-struct Names<'a>(Vec<Name<'a>>);
+type Names<'a> = Vec<Name<'a>>;
 
 self_cell!(
     struct NameCell {
@@ -41,9 +41,9 @@ self_cell!(
     impl {Debug}
 );
 
-fn names_from_str<'a>(s: &'a String) -> Result<Names, NameParseError> {
+fn names_from_str(s: &String) -> Result<Names, NameParseError> {
     let res: Result<Vec<_>, _> = s.split(" ").map(Name::try_from).collect();
-    Ok(Names(res?))
+    Ok(res?)
 }
 
 fn process_input(input: String) {

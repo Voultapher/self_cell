@@ -10,3 +10,5 @@ The advanced examples:
 
 - [How to use an owner type with lifetime](owner_with_lifetime)
 
+- [How to build the dependent with an async function](async_builder)
+

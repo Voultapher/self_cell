@@ -39,6 +39,7 @@ jobs:
         cargo run --verbose --bin fallible_dependent_construction
         cargo run --verbose --bin lazy_ast
         cargo run --verbose --bin owner_with_lifetime
+        cargo run --verbose --bin mut_ref_to_owner_in_builder
     - name: Build benchmarks
       run: |
         cd benchmarks
@@ -75,9 +76,24 @@ jobs:
         rustup component add miri
       shell: bash
 
-    - name: Run tests with nightly basic
+    - name: Run basic tests with nightly
       run: |
         cargo test --verbose
+        cargo test --verbose --release
+    - name: Run newer Rust version tests with nightly
+      run: |
+        cd tests-extra/rust_1_85_or_newer
+        cargo test --verbose
+        cargo test --verbose --release
+    - name: Run examples with nightly
+      run: |
+        cd examples
+        cargo run --verbose --bin fallible_dependent_construction
+        cargo run --verbose --bin lazy_ast
+        cargo run --verbose --bin owner_with_lifetime
+        cargo run --verbose --bin mut_ref_to_owner_in_builder
+        cd async_builder
+        cargo run --verbose
     - name: Run tests x86_64-unknown-linux-gnu
       run: |
         cargo miri test --verbose --target x86_64-unknown-linux-gnu
@@ -91,6 +107,7 @@ jobs:
         cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin fallible_dependent_construction
         cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin lazy_ast
         cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin owner_with_lifetime
+        cargo miri run --verbose --target x86_64-unknown-linux-gnu --bin mut_ref_to_owner_in_builder
 
     - name: Run tests mips64-unknown-linux-gnuabi64
       run: |
@@ -105,4 +122,5 @@ jobs:
         cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin fallible_dependent_construction
         cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin lazy_ast
         cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin owner_with_lifetime
+        cargo miri run --verbose --target mips64-unknown-linux-gnuabi64 --bin mut_ref_to_owner_in_builder
 

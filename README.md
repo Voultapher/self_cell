@@ -36,6 +36,7 @@ impl NewStructName {
     fn borrow_dependent<'a>(&'a self) -> &'a Dependent<'a> { ... }
     [...]
     // See the macro level documentation for a list of all generated functions
+    // and other possible options, e.g. async builder support,
     // https://docs.rs/self_cell/latest/self_cell/macro.self_cell.html#generated-api.
 }
 
@@ -162,6 +163,8 @@ There is an optional feature you can enable called "old_rust" that enables
 support down to rustc version 1.36. However this requires polyfilling std
 library functionality for older rustc with technically UB versions. Testing does
 not show older rustc versions (ab)using this. Use at your own risk.
+
+Using the `async_builder` option requires Rust 1.85 or newer.
 
 The minimum versions are best-effort and may change with any new major release.
 

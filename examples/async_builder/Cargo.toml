@@ -1,0 +1,11 @@
+[package]
+name = "async_builder"
+version = "0.1.0"
+authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
+edition = "2024"
+
+# Not part of workspace because it requires a newer Rust.
+
+[dependencies]
+self_cell = { path = "../../" }
+smol = { version = "2.0", default-features = false }
