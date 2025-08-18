@@ -62,7 +62,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --features=old_rust --test self_cell
   
-  nigthly_miri:
+  nightly_miri:
     runs-on: ubuntu-latest
 
     steps:
