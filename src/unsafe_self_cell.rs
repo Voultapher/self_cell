@@ -31,6 +31,7 @@ pub struct JoinedCell<Owner, Dependent> {
 // Library controlled struct that marks all accesses as unsafe.
 // Because the macro generated struct impl can be extended, could be unsafe.
 #[doc(hidden)]
+#[repr(transparent)]
 pub struct UnsafeSelfCell<ContainedIn, Owner, DependentStatic: 'static> {
     joined_void_ptr: NonNull<u8>,
 
@@ -145,6 +146,7 @@ where
 //
 // mem::forget it once it's no longer needed or dtor will be UB.
 #[doc(hidden)]
+#[repr(transparent)]
 pub struct OwnerAndCellDropGuard<Owner, Dependent> {
     joined_ptr: NonNull<JoinedCell<Owner, Dependent>>,
 }
