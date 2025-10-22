@@ -3,7 +3,7 @@ name = "self_cell"
 version = "1.2.0"
 authors = ["Lukas Bergdoll <lukas.bergdoll@gmail.com>"]
 edition = "2018"
-license = "Apache-2.0"
+license = "Apache-2.0 OR GPL-2.0-only"
 
 description = "Safe-to-use proc-macro-free self-referential structs in stable Rust."
 readme = "README.md"

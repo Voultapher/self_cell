@@ -186,5 +186,5 @@ who participated in this project.
 
 ## License
 
-This project is licensed under the Apache License, Version 2.0 -
-see the [LICENSE.md](LICENSE.md) file for details.
+This project is dual licensed under the Apache License Version 2.0 OR GNU General Public License Version 2.0 -
+see the [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-GPLv2](LICENSE-GPLv2) for details.
