@@ -302,6 +302,11 @@ impl<T> MutBorrow<T> {
         self.value.into_inner()
     }
 }
+impl<T> From<T> for MutBorrow<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
 
 // SAFETY: The reasoning why it is safe to share `MutBorrow` across threads is as follows: The
 // `AtomicBool` `is_locked` ensures that only ever exactly one thread can get access to the inner
