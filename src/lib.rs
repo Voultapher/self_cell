@@ -152,7 +152,7 @@
 //! library functionality for older rustc with technically UB versions. Testing
 //! does not show older rustc versions (ab)using this. Use at your own risk.
 //!
-//! The minimum versions are a best effor and may change with any new major
+//! The minimum versions are a best effort and may change with any new major
 //! release.
 
 #![no_std]
