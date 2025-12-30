@@ -13,7 +13,7 @@ repository = "https://github.com/Voultapher/self_cell"
 keywords = ["lifetime", "borrowing", "self", "reference", "intrusive"]
 categories = ["rust-patterns", "memory-management"]
 
-include = ["src/*.rs", "Cargo.toml", "README.md", "LICENSE"]
+include = ["src/*.rs", "Cargo.toml", "README.md", "LICENSE*"]
 
 [dependencies]
 rustversion = { version = ">=1", optional = true }
