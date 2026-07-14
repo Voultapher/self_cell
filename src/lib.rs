@@ -541,7 +541,7 @@ macro_rules! _self_cell_new_body {
 
         let joined_void_ptr = ::core::ptr::NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
 
-        let mut joined_ptr = joined_void_ptr.cast::<$JoinedCell>();
+        let joined_ptr = joined_void_ptr.cast::<$JoinedCell>();
 
         let (owner_ptr, dependent_ptr) = <$JoinedCell>::_field_pointers(joined_ptr.as_ptr());
 
@@ -620,7 +620,7 @@ macro_rules! _self_cell_try_new_body {
 
         let joined_void_ptr = ::core::ptr::NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
 
-        let mut joined_ptr = joined_void_ptr.cast::<$JoinedCell>();
+        let joined_ptr = joined_void_ptr.cast::<$JoinedCell>();
 
         let (owner_ptr, dependent_ptr) = <$JoinedCell>::_field_pointers(joined_ptr.as_ptr());
 
@@ -701,7 +701,7 @@ macro_rules! _self_cell_try_new_or_recover_body {
 
         let joined_void_ptr = ::core::ptr::NonNull::new($crate::alloc::alloc::alloc(layout)).unwrap();
 
-        let mut joined_ptr = joined_void_ptr.cast::<$JoinedCell>();
+        let joined_ptr = joined_void_ptr.cast::<$JoinedCell>();
 
         let (owner_ptr, dependent_ptr) = <$JoinedCell>::_field_pointers(joined_ptr.as_ptr());
 
