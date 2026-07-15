@@ -25,14 +25,25 @@ impl<'a> From<&'a String> for NotSend<'a> {
     }
 }
 
+type StringRef<'a> = &'a str;
+
 self_cell!(
-    struct NotSendCell {
+    struct NotSendCellOwner<'a> {
+        owner: NotSend<'a>,
+
+        #[covariant]
+        dependent: StringRef,
+    }
+);
+
+self_cell!(
+    struct NotSendCellDependent {
         owner: String,
 
         #[covariant]
         dependent: NotSend,
     }
-); // no impl
+);
 
 #[test]
 fn not_send() {
@@ -41,7 +52,8 @@ fn not_send() {
 
     assert!(impls!(String: Send));
     assert!(!impls!(NotSend: Send));
-    assert!(!impls!(NotSendCell: Send));
+    assert!(!impls!(NotSendCellOwner: Send));
+    assert!(!impls!(NotSendCellDependent: Send));
 }
 
 #[test]
@@ -51,7 +63,8 @@ fn not_sync() {
 
     assert!(impls!(String: Sync));
     assert!(!impls!(NotSend: Sync));
-    assert!(!impls!(NotSendCell: Sync));
+    assert!(!impls!(NotSendCellOwner: Sync));
+    assert!(!impls!(NotSendCellDependent: Sync));
 }
 
 #[test]
