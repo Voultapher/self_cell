@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 use std::panic::catch_unwind;
 use std::rc::Rc;
 use std::str;
+use std::thread;
 
 use once_cell::unsync::OnceCell;
 
@@ -905,4 +906,58 @@ fn mut_borrow_new_borrow_mut() {
     let cell = MutStringCell::new(MutBorrow::new("abc".into()), |owner| owner.borrow_mut());
 
     cell.borrow_owner().borrow_mut();
+}
+
+#[test]
+fn sync_send_construction() {
+    // In a sense this test is a little silly, there isn't a way to slice through construction steps
+    // without async. So Send-nes of the constructors is not relevant, but it costs us not much to
+    // have this test and it might notice some unwanted regression.
+    type Dependent<'a> = &'a str;
+
+    self_cell!(
+        struct StringCell {
+            owner: String,
+
+            #[covariant]
+            dependent: Dependent,
+        }
+    );
+
+    thread::spawn(|| {
+        let cell_a = StringCell::new("No Stress".into(), |owner| &owner[..]);
+        assert_eq!(cell_a.borrow_dependent().len(), 9);
+
+        let cell_b = StringCell::try_new("Give me a Reason".into(), |owner| {
+            std::result::Result::Ok::<_, ()>(&owner[..])
+        })
+        .unwrap();
+        assert_eq!(cell_b.borrow_dependent().len(), 16);
+
+        let cell_c = StringCell::try_new_or_recover("Da Me".into(), |owner| {
+            std::result::Result::Ok::<_, ()>(&owner[..])
+        })
+        .unwrap();
+        assert_eq!(cell_c.borrow_dependent().len(), 5);
+    })
+    .join()
+    .unwrap();
+
+    let cell_a = StringCell::new("No Stress".into(), |owner| &owner[..]);
+    let cell_b = StringCell::try_new("Give me a Reason".into(), |owner| {
+        std::result::Result::Ok::<_, ()>(&owner[..])
+    })
+    .unwrap();
+    let cell_c = StringCell::try_new_or_recover("Da Me".into(), |owner| {
+        std::result::Result::Ok::<_, ()>(&owner[..])
+    })
+    .unwrap();
+
+    thread::spawn(move || {
+        assert_eq!(cell_a.borrow_dependent().len(), 9);
+        assert_eq!(cell_b.borrow_dependent().len(), 16);
+        assert_eq!(cell_c.borrow_dependent().len(), 5);
+    })
+    .join()
+    .unwrap();
 }

@@ -102,3 +102,54 @@ fn async_self_cell_with_mut_borrow() {
     });
     assert_eq!(**cell.borrow_dependent(), OWNER_STR[..OWNER_STR.len() - 1]);
 }
+
+#[test]
+fn async_self_cell_send_construction() {
+    // See https://github.com/Voultapher/self_cell/issues/74
+    type Dependent<'a> = &'a str;
+
+    self_cell!(
+        struct AsyncStringCell {
+            owner: String,
+
+            #[covariant, async_builder]
+            dependent: Dependent,
+        }
+    );
+
+    async fn spawn<R, F: Future<Output = R> + Send + 'static>(f: F) -> R {
+        f.await
+    }
+
+    async fn dummy_await_point() {}
+
+    let cell_a = smol::block_on(spawn(async {
+        let cell_a =
+            AsyncStringCell::new(
+                "The Flesh of the World".to_string(),
+                async |owner| &owner[..],
+            )
+            .await;
+        dummy_await_point().await;
+        assert_eq!(cell_a.borrow_dependent().len(), 22);
+
+        let cell_b = AsyncStringCell::try_new("SACRILEGIOUS".to_string(), async |owner| {
+            Ok::<_, ()>(&owner[..])
+        })
+        .await
+        .unwrap();
+        dummy_await_point().await;
+        assert_eq!(cell_b.borrow_dependent().len(), 12);
+
+        let cell_c = AsyncStringCell::try_new_or_recover("Wake Up".to_string(), async |owner| {
+            Ok::<_, ()>(&owner[..])
+        })
+        .await
+        .unwrap();
+        dummy_await_point().await;
+        assert_eq!(cell_c.borrow_dependent().len(), 7);
+
+        cell_a
+    }));
+    assert_eq!(cell_a.borrow_dependent().len(), 22);
+}

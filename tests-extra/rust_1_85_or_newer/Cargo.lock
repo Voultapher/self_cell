@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "self_cell"
-version = "1.1.0"
+version = "1.2.2"
 
 [[package]]
 name = "signal-hook-registry"
