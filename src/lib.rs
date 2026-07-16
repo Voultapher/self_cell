@@ -187,7 +187,7 @@ pub mod unsafe_self_cell;
 /// );
 /// ```
 ///
-/// See the crate overview to get a get an overview and a motivating example.
+/// See the crate overview to get an overview and a motivating example.
 ///
 /// ### Generated API:
 ///
@@ -308,7 +308,7 @@ pub mod unsafe_self_cell;
 ///     `Dependent<'a>::From<&'a Owner>` is deterministic, so that only hashing
 ///     owner is enough.
 ///
-///   All `AutomaticDerive` are optional and you can implement you own version
+///   All `AutomaticDerive` are optional and you can implement your own version
 ///   of these traits. The declared struct is part of your module and you are
 ///   free to implement any trait in any way you want. Access to the unsafe
 ///   internals is only possible via unsafe functions, so you can't accidentally
@@ -386,7 +386,7 @@ macro_rules! self_cell {
 
         $crate::_covariant_access!($Covariance, $Vis, $Dependent);
 
-        /// Consumes `self` and returns the the owner.
+        /// Consumes `self` and returns the owner.
         $Vis fn into_owner(self) -> $Owner {
             // This is only safe to do with repr(transparent).
             let unsafe_self_cell = unsafe { ::core::mem::transmute::<

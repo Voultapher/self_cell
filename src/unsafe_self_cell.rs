@@ -270,7 +270,7 @@ impl<Owner, Dependent> JoinedCell<Owner, Dependent> {
     }
 }
 
-/// Wrapper type that allows creating a self-referential type that hold a mutable borrow `&mut T`.
+/// Wrapper type that allows creating a self-referential type that holds a mutable borrow `&mut T`.
 ///
 /// Example usage:
 ///
